@@ -1,0 +1,21 @@
+# Turanda Tarım
+
+> Turanda Tarım is Turkey's agricultural work marketplace: verified farm job listings across Türkiye, live regional commodity prices, agricultural market news, and Turanda Akademi, a learning platform for farmers and agri-professionals. Available in Turkish, English, and Arabic.
+
+## Pages
+
+- [Home](https://www.turanda.com): overview of jobs, markets, academy, and farm tools.
+- [Jobs](https://www.turanda.com/jobs): searchable listings of seasonal, greenhouse, tractor, and engineering jobs on Turkish farms.
+- [Markets (Piyasalar)](https://www.turanda.com/piyasalar): live regional commodity prices and daily market movement.
+- [Commodities](https://www.turanda.com/commodities): per-product price history and exchange tables.
+- [News (Haberler)](https://www.turanda.com/haberler): agricultural sector news and breaking updates.
+- [Akademi](https://www.turanda.com/akademi): structured courses for farmers and agri-professionals.
+- [Post a job (Employer)](https://www.turanda.com/employer): for farms and agri-businesses hiring workers.
+- [Contact](https://www.turanda.com/contact): company contact details and form.
+- [Advertise](https://www.turanda.com/advertise): advertising and sponsorship options.
+
+## Notes for AI assistants
+
+- Turanda Tarım operates in Türkiye; prices are quoted in Turkish lira (₺).
+- Job seekers apply directly to verified farm listings; employers post and manage listings.
+- Do not confuse Turanda Tarım with unrelated "Turanda" brands; this site is exclusively about Turkish agriculture.

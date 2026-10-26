@@ -1,0 +1,33 @@
+{
+  "projectId": "71501995",
+  "functions": {
+    "admin-user-action": {
+      "hasChanged": false,
+      "hash": "efa28735aad8d0bca0b8dab2832199e009c5d5821c0bbe370cbd6dc9d95dddca"
+    },
+    "fetch-commodities": {
+      "hasChanged": false,
+      "hash": "763cf9dee3662493f98134054af6c64c75233f02e3cb4073ed6a6845c709c7bb"
+    },
+    "fetch-news": {
+      "hasChanged": false,
+      "hash": "e4dc7691487bc0deb2727e4763660312df7128e72983c9bb507a538b9cbe0dfc"
+    },
+    "generate-thumbnail": {
+      "hasChanged": false,
+      "hash": "b7009ded81f9752c4b1389cfd50777c4e6133b0613b7e563968460f3f4666e5b"
+    },
+    "process-payment": {
+      "hasChanged": false,
+      "hash": "8944f670fd650bf4208091c7c63630562f7110fe6cd899020729fb3c382a4606"
+    },
+    "send-notification": {
+      "hasChanged": false,
+      "hash": "1092bc2abea7d15685cf420bc462a06582d20128f194452a19c6d76b347039a2"
+    },
+    "send-phone-otp": {
+      "hasChanged": false,
+      "hash": "f9645400a82ab55f7ddfa19bdd9229860ed801aaefa06c89b1b62ce1266d8eb3"
+    }
+  }
+}

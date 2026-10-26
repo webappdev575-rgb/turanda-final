@@ -1,0 +1,27 @@
+[functions.fetch-news]
+verify_jwt = false
+entrypoint = "./functions/fetch-news/index.ts"
+
+[functions.fetch-commodities]
+verify_jwt = false
+entrypoint = "./functions/fetch-commodities/index.ts"
+
+[functions.generate-thumbnail]
+verify_jwt = true
+entrypoint = "./functions/generate-thumbnail/index.ts"
+
+[functions.admin-user-action]
+verify_jwt = true
+entrypoint = "./functions/admin-user-action/index.ts"
+
+[functions.send-notification]
+verify_jwt = false
+entrypoint = "./functions/send-notification/index.ts"
+
+[functions.process-payment]
+verify_jwt = true
+entrypoint = "./functions/process-payment/index.ts"
+
+[functions.send-phone-otp]
+verify_jwt = false
+entrypoint = "./functions/send-phone-otp/index.ts"
