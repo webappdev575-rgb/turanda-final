@@ -1,4 +1,4 @@
-import { createClient } from "npm:@supabase/supabase-js@2.58.0";
+import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2.118.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -8,11 +8,11 @@ const corsHeaders = {
 
 interface NewsArticle {
   title: string;
-  summary: string;
+  summary: string | null;
   category: string;
   region: string;
   source: string;
-  url: string;
+  url: string | null;
   published_at: string;
   agency_type?: string | null;
   sector?: string | null;
@@ -110,7 +110,7 @@ async function callAi(ai: AiConfig, system: string, user: string, timeoutMs = 12
 
 async function isAuthorizedStaff(
   req: Request,
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClient,
 ): Promise<boolean> {
   const token = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "").trim();
   if (!token) return false;
@@ -275,7 +275,7 @@ async function translateArticles(articles: ArticleRow[]): Promise<Map<string, Tr
 }
 
 async function persistTranslations(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClient,
   articles: ArticleRow[],
 ): Promise<number> {
   const translations = await translateArticles(articles);
@@ -289,7 +289,7 @@ async function persistTranslations(
 
 // ─── Commodity registry cache (per invocation) ───
 
-async function loadCommodityNames(supabase: ReturnType<typeof createClient>): Promise<string[]> {
+async function loadCommodityNames(supabase: SupabaseClient): Promise<string[]> {
   const { data } = await supabase.from("commodity_registry").select("commodity_name");
   return (data ?? []).map((r: { commodity_name: string }) => r.commodity_name);
 }
@@ -297,7 +297,7 @@ async function loadCommodityNames(supabase: ReturnType<typeof createClient>): Pr
 // ─── Full rewrite pipeline for freshly ingested rows ───
 
 async function processRewrites(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClient,
   rows: ArticleRow[],
 ): Promise<{ rewritten: number; autoPublished: number; pendingReview: number; tagged: number }> {
   const ai = getAiConfig();
@@ -359,7 +359,7 @@ async function processRewrites(
 // ─── On-demand rewrite for one article (admin button) ───
 
 async function rewriteSingle(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClient,
   articleId: string,
 ): Promise<{ success: boolean; error?: string }> {
   const { data: row, error: fetchErr } = await supabase
@@ -417,7 +417,7 @@ async function rewriteSingle(
 // ─── Upsert helper ───
 
 async function upsertArticles(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClient,
   rows: NewsArticle[],
 ) {
   // Generate slugs for new rows; upsert on title, ignoring duplicates, then
@@ -454,7 +454,7 @@ const GOV_SOURCES: GovSource[] = [
 ];
 
 async function fetchGovSource(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClient,
   src: GovSource,
 ): Promise<number> {
   try {
@@ -502,7 +502,7 @@ async function fetchGovSource(
 }
 
 async function runGovSourcesMode(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClient,
   sourceKey?: string,
 ): Promise<{ ingested: number; sources: { key: string; fetched: number }[] }> {
   const sources = sourceKey ? GOV_SOURCES.filter((s) => s.key === sourceKey) : GOV_SOURCES;

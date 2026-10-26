@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import { useAuth } from '@/components/auth-provider';
 import { supabase } from '@/lib/supabase';
 import type { Application, ApplicationStatus } from '@/lib/types';
 
@@ -19,6 +20,8 @@ interface ApplicationInput {
 }
 
 export function useApplications(jobId?: string) {
+  const { user } = useAuth();
+  const userId = user?.id;
   const [applications, setApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -26,6 +29,7 @@ export function useApplications(jobId?: string) {
   const fetchApplications = useCallback(async () => {
     setLoading(true);
     setError(null);
+    if (!userId) { setApplications([]); setLoading(false); return; }
     let query = supabase
       .from('applications')
       .select('*, job:jobs(*)')
@@ -40,7 +44,7 @@ export function useApplications(jobId?: string) {
       setApplications(data as Application[]);
     }
     setLoading(false);
-  }, [jobId]);
+  }, [jobId, userId]);
 
   useEffect(() => {
     fetchApplications();

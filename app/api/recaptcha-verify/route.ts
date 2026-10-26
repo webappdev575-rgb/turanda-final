@@ -1,35 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const RECAPTCHA_SECRET_KEY = process.env.RECAPTCHA_SECRET_KEY || '';
-
 export async function POST(req: NextRequest) {
+  const secret = process.env.RECAPTCHA_SECRET_KEY;
+  if (!secret) {
+    return NextResponse.json({ success: false, error: 'Verification is not configured' }, { status: 503 });
+  }
+  let body: unknown;
   try {
-    const body = await req.json();
-    const token: string | undefined = body?.token;
-
-    if (!token) {
-      return NextResponse.json({ success: false, error: 'Missing token' }, { status: 400 });
-    }
-
-    if (token === 'no-key-dev-mode') {
-      return NextResponse.json({ success: true, score: 1.0, dev: true });
-    }
-
-    if (!RECAPTCHA_SECRET_KEY) {
-      return NextResponse.json({ success: true, score: 0.9, dev: true });
-    }
-
-    const verifyRes = await fetch('https://www.google.com/recaptcha/api/siteverify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: `secret=${RECAPTCHA_SECRET_KEY}&response=${token}`,
-    });
-
-    const data = await verifyRes.json();
-
-    const passed = data.success && (data.score === undefined || data.score >= 0.5);
-    return NextResponse.json({ success: passed, score: data.score ?? 0 });
+    body = await req.json();
   } catch {
-    return NextResponse.json({ success: false, error: 'Verification failed' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Invalid JSON' }, { status: 400 });
+  }
+  const { token, action } = (body ?? {}) as { token?: unknown; action?: unknown };
+  if (typeof token !== 'string' || !token || token.length > 4096 || token === 'no-key-dev-mode' ||
+      typeof action !== 'string' || !['login', 'signup', 'checkout', 'post_job', 'ad_request', 'contact', 'apply_job'].includes(action)) {
+    return NextResponse.json({ success: false, error: 'Invalid verification request' }, { status: 400 });
+  }
+  try {
+    const response = await fetch('https://www.google.com/recaptcha/api/siteverify', {
+      method: 'POST',
+      body: new URLSearchParams({ secret, response: token }),
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!response.ok) throw new Error('Provider unavailable');
+    const data = await response.json();
+    const hostname = new URL(process.env.NEXT_PUBLIC_SITE_URL || req.url).hostname;
+    const age = Date.now() - Date.parse(data.challenge_ts);
+    const success = data.success === true && typeof data.score === 'number' && data.score >= 0.5 &&
+      data.action === action && data.hostname === hostname && age >= -10000 && age <= 120000;
+    return NextResponse.json({ success }, { status: success ? 200 : 403 });
+  } catch {
+    return NextResponse.json({ success: false, error: 'Verification unavailable' }, { status: 502 });
   }
 }

@@ -73,7 +73,7 @@ export function ApplicationList({ applications, onUpdateStatus }: ApplicationLis
       .insert({
         job_id: app.job_id,
         employer_id: employerId,
-        applicant_id: null,
+        applicant_id: app.applicant_id,
         applicant_name: app.applicant_name,
         applicant_email: app.applicant_email,
         application_id: app.id,

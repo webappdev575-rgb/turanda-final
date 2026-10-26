@@ -25,6 +25,7 @@ export type PaymentStatus = 'free' | 'pending' | 'paid' | 'failed';
 
 export interface Job {
   id: string;
+  employer_id: string | null;
   title: string;
   farm_name: string;
   job_type: JobType;

@@ -143,29 +143,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
       setSession(newSession);
       if (newSession?.user) {
         (async () => {
           await fetchProfile(newSession.user.id);
 
-          if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
-            const isEmailConfirmed = !!newSession.user.email_confirmed_at;
-            if (isEmailConfirmed) {
-              const { data: prof } = await supabase
-                .from('profiles')
-                .select('is_verified')
-                .eq('id', newSession.user.id)
-                .maybeSingle();
-              if (prof && !prof.is_verified) {
-                await supabase
-                  .from('profiles')
-                  .update({ is_verified: true, updated_at: new Date().toISOString() })
-                  .eq('id', newSession.user.id);
-                await fetchProfile(newSession.user.id);
-              }
-            }
-          }
         })();
       } else {
         setProfile(null);
@@ -251,13 +234,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const updateProfile = useCallback(async (updates: Partial<Profile>) => {
     if (!session?.user) return { error: 'Not authenticated' };
-    const { is_admin, is_moderator, is_banned, id, created_at, ...safeUpdates } = updates;
-    const { error } = await supabase
+    const { is_admin, is_moderator, is_editor, is_banned, is_verified, phone_verified, id, created_at, ...safeUpdates } = updates;
+    const { data, error } = await supabase
       .from('profiles')
       .update({ ...safeUpdates, updated_at: new Date().toISOString() })
-      .eq('id', session.user.id);
+      .eq('id', session.user.id)
+      .select('*')
+      .single();
     if (error) return { error: error.message };
-    setProfile((prev) => prev ? { ...prev, ...safeUpdates } : prev);
+    setProfile(data as Profile);
     return { error: null };
   }, [session]);
 
@@ -279,23 +264,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const verifyPhoneOtp = useCallback(async (phone: string, token: string) => {
     if (!isSupabaseConfigured) return { error: 'Phone verification is not configured yet.' };
 
-    const { error } = await supabase.auth.verifyOtp({ phone, token, type: 'sms' });
+    const { data, error } = await supabase.auth.verifyOtp({ phone, token, type: 'sms' });
     if (error) return { error: error.message };
-    const userId = session?.user?.id;
-    if (userId) {
-      await supabase
-        .from('profiles')
-        .update({
-          phone,
-          phone_verified: true,
-          is_verified: true,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', userId);
-      await fetchProfile(userId);
-    }
+    if (data.user) await fetchProfile(data.user.id);
     return { error: null };
-  }, [session, fetchProfile]);
+  }, [fetchProfile]);
 
   const resendEmailVerification = useCallback(async (email: string) => {
     if (!isSupabaseConfigured) return { error: 'Email verification is not configured yet.' };

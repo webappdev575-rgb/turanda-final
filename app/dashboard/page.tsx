@@ -528,9 +528,9 @@ export default function DashboardPage() {
           ) : enrollments.length === 0 ? (
             <div className="py-6 text-center">
               <p className="text-sm text-muted-foreground">{t('akademi.noEnrollments')}</p>
-              <a href="/akademi" className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-primary hover:gap-2 transition-all">
+              <Link href="/akademi" className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-primary hover:gap-2 transition-all">
                 {t('akademi.allCourses')}<ArrowRight className="h-4 w-4" />
-              </a>
+              </Link>
             </div>
           ) : (
             <div className="space-y-2">

@@ -24,7 +24,7 @@ const notoSansArabic = Noto_Sans_Arabic({
 });
 
 // Replace the verification value with your Google Search Console token.
-const GSC_VERIFICATION = 'google-search-console-verification-code-here';
+const GSC_VERIFICATION = process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION;
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -130,7 +130,7 @@ export default function RootLayout({
                   publisher: { '@id': `${SITE_URL}/#organization` },
                 },
               ],
-            }),
+            }).replace(/</g, '\\u003c'),
           }}
         />
       </head>

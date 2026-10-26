@@ -1,3 +1,7 @@
+if (process.env.NODE_ENV === 'production' || process.env.NEXT_PUBLIC_APP_ENV === 'production' || process.env.DEV_TEST_ACCOUNTS_ENABLED !== 'true') {
+  throw new Error('Test account seeding requires DEV_TEST_ACCOUNTS_ENABLED=true in a development project.');
+}
+
 const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 

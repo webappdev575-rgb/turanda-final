@@ -1,8 +1,10 @@
+> Deployment and security update (2026-10-26): use `DEPLOYMENT_GUIDE.md` and `SECURITY_AUDIT.md` for the current Node 24 runtime, owner access rules, disabled online checkout, and provider requirements. The feature map below describes the original screens; it is not proof that optional integrations are production-ready.
+
 # Turanda Architecture Reference
 
 ## 1. System overview
 
-Turanda is a Next.js 13 App Router application for agricultural jobs, market prices, news, onboarding, messaging, notifications, advertising, and administration. The browser uses the Supabase anon key through `@supabase/supabase-js`; privileged operations run through Supabase Edge Functions or the server-only development seed script.
+Turanda is a Next.js 15 App Router application for agricultural jobs, market prices, news, onboarding, messaging, notifications, advertising, and administration. The browser uses the Supabase anon key through `@supabase/supabase-js`; privileged operations run through Supabase Edge Functions or the server-only development seed script.
 
 The repository intentionally uses the current root-level layout rather than a `src/` directory:
 

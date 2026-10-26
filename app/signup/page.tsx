@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -17,6 +17,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/components/auth-provider';
 import { useI18n } from '@/components/i18n-provider';
+import { safeRedirect } from '@/lib/safe-redirect';
 import { Recaptcha } from '@/components/recaptcha';
 import { GoogleSignInButton, OrDivider } from '@/components/auth/google-sign-in-button';
 import { TermsModal } from '@/components/terms-modal';
@@ -32,7 +33,7 @@ const TURKISH_REGIONS = [
   'Güneydoğu Anadolu', 'Doğu Anadolu',
 ];
 
-export default function SignupPage() {
+function SignupContent() {
   const { signUp } = useAuth();
   const { t } = useI18n();
   const router = useRouter();
@@ -123,7 +124,7 @@ export default function SignupPage() {
     } else if (result.needsEmailVerification) {
       setShowVerification(true);
     } else {
-      router.push(searchParams.get('next') || (skipped ? '/dashboard' : role === 'employer' ? '/employer' : '/jobs'));
+      router.push(safeRedirect(searchParams.get('next'), skipped ? '/dashboard' : role === 'employer' ? '/employer' : '/jobs'));
     }
   };
 
@@ -375,4 +376,8 @@ export default function SignupPage() {
       <TermsModal open={termsOpen} onOpenChange={setTermsOpen} />
     </div>
   );
+}
+
+export default function SignupPage() {
+  return <Suspense fallback={<div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin" /></div>}><SignupContent /></Suspense>;
 }

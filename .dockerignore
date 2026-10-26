@@ -10,3 +10,9 @@ README.md
 .eslintrc.json
 bolt.toml
 .bolt
+
+.env*
+!.env.example
+deploy
+output
+workspace-context

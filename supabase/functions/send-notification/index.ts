@@ -1,3 +1,4 @@
+import { authorizeStaff } from '../_shared/authorization.ts';
 Deno.serve(async (req: Request) => {
   const corsHeaders = {
     "Access-Control-Allow-Origin": "*",
@@ -7,6 +8,13 @@ Deno.serve(async (req: Request) => {
 
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 200, headers: corsHeaders });
+  }
+
+  if (req.method !== "POST") {
+    return new Response(JSON.stringify({ error: "Method not allowed" }), { status: 405, headers: { ...corsHeaders, "Content-Type": "application/json", Allow: "POST, OPTIONS" } });
+  }
+  if (!(await authorizeStaff(req, ['is_admin']))) {
+    return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 
   try {
@@ -28,6 +36,12 @@ Deno.serve(async (req: Request) => {
 
     const body = await req.json().catch(() => ({}));
     const { notificationId, batch } = body;
+    if ((notificationId !== undefined && (typeof notificationId !== 'string' || !/^[0-9a-f-]{36}$/i.test(notificationId))) ||
+        (batch !== undefined && (!Number.isInteger(batch) || batch < 1 || batch > 50))) {
+      return new Response(JSON.stringify({ error: 'Invalid notification request' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     const supabaseHeaders = {
       Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
@@ -36,14 +50,14 @@ Deno.serve(async (req: Request) => {
     };
 
     // Fetch notifications to send
-    let url = `${SUPABASE_URL}/rest/v1/notifications?select=*`;
+    let url = `${SUPABASE_URL}/rest/v1/notifications?select=*&status=eq.pending`;
     let filterParam = "";
 
     if (notificationId) {
       filterParam = `&id=eq.${notificationId}`;
       url += filterParam;
     } else {
-      url += `&status=eq.pending&limit=${batch || 20}`;
+      url += `&limit=${batch || 20}`;
     }
 
     const fetchResponse = await fetch(url, {
