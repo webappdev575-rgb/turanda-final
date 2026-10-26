@@ -99,6 +99,7 @@ export function JobMapView({
   const jobMarkersRef = useRef<Map<string, L.CircleMarker>>(new Map());
   const provinceLayersRef = useRef<L.Layer[]>([]);
   const inRangeProvincesRef = useRef<Set<string>>(new Set());
+  const suppressMouseUpRef = useRef(false);
 
   // ---- Derived data ----
   const filteredJobs = useMemo(() => {
@@ -143,16 +144,22 @@ export function JobMapView({
     });
     mapRef.current = map;
 
-    // Base tile layer — swapped on theme change in a separate effect
-    const tileUrl = isDark
-      ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-      : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+    // Base tile layer — OSM tiles are free and require no API key.
+    // Dark mode is achieved via CSS filter on the tile pane (see style block).
+    const tileUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
     const tileLayer = L.tileLayer(tileUrl, {
-      attribution: '&copy; OpenStreetMap &copy; CARTO',
-      subdomains: 'abcd',
+      attribution: '&copy; OpenStreetMap contributors',
+      subdomains: 'abc',
       maxZoom: 19,
     }).addTo(map);
     tileLayerRef.current = tileLayer;
+
+    // Apply dark-mode filter to the tile pane
+    const tilePane = map.getPane('tilePane');
+    if (tilePane) {
+      tilePane.classList.add('tr-tile-pane');
+      if (isDark) tilePane.classList.add('tr-tile-dark');
+    }
 
     // Add zoom control to bottom-right
     L.control.zoom({ position: 'bottomright' }).addTo(map);
@@ -187,12 +194,18 @@ export function JobMapView({
                 const inRange = inRangeProvincesRef.current.has(name);
                 layerPath.setStyle(inRange ? inRangeStyle : baseStyle);
               },
+              click: () => {
+                // Close the tooltip so the province name box doesn't linger
+                layer.closeTooltip();
+              },
             });
 
             provinceLayersRef.current.push(layer);
           },
         }).addTo(map);
         geoJsonRef.current = geo;
+        // Push province fills below job markers
+        geo.eachLayer((layer) => (layer as L.Path).bringToBack());
         // Fit the map to Turkey's bounds once loaded
         try {
           map.fitBounds(geo.getBounds(), { padding: [20, 20] });
@@ -200,12 +213,13 @@ export function JobMapView({
           // bounds may not be ready
         }
       })
-      .catch(() => setGeoError('Map boundaries failed to load'));
+      .catch(() => setGeoError('Map boundaries could not be loaded. Please refresh the page.'));
 
     // Map click → set search center (distinguishes click from drag via move threshold)
     let mouseDownPos: { x: number; y: number } | null = null;
     map.on('mousedown', (e: L.LeafletMouseEvent) => {
       mouseDownPos = { x: e.containerPoint.x, y: e.containerPoint.y };
+      suppressMouseUpRef.current = false;
     });
     map.on('mouseup', (e: L.LeafletMouseEvent) => {
       if (!mouseDownPos) return;
@@ -214,6 +228,14 @@ export function JobMapView({
         e.containerPoint.y - mouseDownPos.y,
       );
       mouseDownPos = null;
+      // Close any lingering province tooltips on click/drag
+      provinceLayersRef.current.forEach((layer) => {
+        (layer as L.Layer & { closeTooltip: () => void }).closeTooltip();
+      });
+      if (suppressMouseUpRef.current) {
+        suppressMouseUpRef.current = false;
+        return;
+      }
       // If the user barely moved, treat as a click → set center.
       // If they dragged a meaningful distance, set center where they released.
       if (moved < 5) {
@@ -246,10 +268,12 @@ export function JobMapView({
     const tile = tileLayerRef.current;
     if (!map || !tile) return;
 
-    const newUrl = isDark
-      ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-      : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
-    tile.setUrl(newUrl);
+    // Toggle dark-mode CSS filter on the tile pane (same OSM tiles for both themes)
+    const tilePane = map.getPane('tilePane');
+    if (tilePane) {
+      if (isDark) tilePane.classList.add('tr-tile-dark');
+      else tilePane.classList.remove('tr-tile-dark');
+    }
 
     const s = themeStyles(isDark);
     for (const layer of provinceLayersRef.current) {
@@ -257,6 +281,8 @@ export function JobMapView({
       const name = (pathLayer as L.Path & { feature?: { properties?: { name?: string } } }).feature?.properties?.name ?? '';
       const inRange = inRangeProvincesRef.current.has(name);
       pathLayer.setStyle(inRange ? { ...s.provinceInRange } : { ...s.province });
+      // Keep provinces below job markers after restyle
+      pathLayer.bringToBack();
     }
     if (radiusCircleRef.current) {
       radiusCircleRef.current.setStyle(s.radiusCircle);
@@ -281,6 +307,7 @@ export function JobMapView({
       const name = (pathLayer as L.Path & { feature?: { properties?: { name?: string } } }).feature?.properties?.name ?? '';
       const inRange = inRangeProvinces.has(name);
       pathLayer.setStyle(inRange ? { ...s.provinceInRange } : { ...s.province });
+      pathLayer.bringToBack();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inRangeProvinces]);
@@ -342,6 +369,7 @@ export function JobMapView({
 
         marker.on('mouseover', () => setHoveredJob(job.id));
         marker.on('mouseout', () => setHoveredJob(null));
+        marker.on('mousedown', () => { suppressMouseUpRef.current = true; });
         marker.on('click', (e: L.LeafletMouseEvent) => {
           L.DomEvent.stopPropagation(e);
           setPopupJob(job);
@@ -355,6 +383,8 @@ export function JobMapView({
           fillColor: inRange ? s.markerInRange : s.markerOutOfRange,
         });
       }
+      // Ensure job markers always render above province fills
+      marker.bringToFront();
 
       // Highlight ring on hover/select
       // (Leaflet circleMarker doesn't support a second stroke; we toggle weight)
@@ -508,6 +538,10 @@ export function JobMapView({
         .leaflet-bar a:hover {
           background: ${isDark ? '#2a3a32' : '#f0f0f0'} !important;
         }
+        /* Dark-mode tile filter: invert OSM tiles to produce a dark basemap */
+        .tr-tile-pane.tr-tile-dark {
+          filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.9);
+        }
       `}</style>
 
       {/* Search */}
@@ -607,7 +641,7 @@ export function JobMapView({
 
           {/* Popup */}
           {popupJob && (
-            <div className="pointer-events-auto absolute left-1/2 top-3 z-[500] w-72 -translate-x-1/2 overflow-hidden rounded-xl border border-border bg-background/95 shadow-xl backdrop-blur animate-fade-in">
+            <div className="pointer-events-auto absolute left-1/2 top-3 z-[1000] w-72 -translate-x-1/2 overflow-hidden rounded-xl border border-border bg-background/95 shadow-xl backdrop-blur animate-fade-in">
               <div className="flex items-start justify-between gap-2 border-b border-border px-3 py-2">
                 <p className="line-clamp-1 text-sm font-bold text-foreground">{popupJob.title}</p>
                 <button
