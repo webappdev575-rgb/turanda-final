@@ -42,10 +42,19 @@ Keep database/Auth/Storage/Edge Functions on Supabase. You do not need a MySQL d
    UPDATE public.jobs
    SET employer_id = 'VERIFIED-EMPLOYER-USER-UUID'::uuid
    WHERE id = 'SPECIFIC-JOB-UUID'::uuid AND employer_id IS NULL;
+   -- Restore missing participants only after the job owner has been verified.
+   UPDATE public.conversations AS c
+   SET applicant_id = a.applicant_id
+   FROM public.applications AS a
+   JOIN public.jobs AS j ON j.id = a.job_id
+   WHERE c.application_id = a.id AND c.job_id = j.id
+     AND c.employer_id = j.employer_id
+     AND j.id = 'SPECIFIC-JOB-UUID'::uuid
+     AND c.applicant_id IS NULL AND a.applicant_id IS NOT NULL;
    COMMIT;
    ```
 
-   Verify the affected row and its associated applications. Do not infer ownership from a farm name or from legacy conversation records. Historical conversations and legacy applications with no `applicant_id` need a separate data review; the new migration does not invent missing identities or rewrite past messages.
+   Verify the affected row and its associated applications. Do not infer ownership from a farm name or from legacy conversation records. The migration fills missing conversation `applicant_id` values only when the linked application identifies the applicant and its job and verified employer match the conversation. Ownerless legacy jobs remain untouched until you run the verified owner/participant repair above. Existing nonempty conversation identities and applications with no applicant still need a separate data review; no job owners or message history are inferred.
 6. Deploy the changed Edge Functions together with their shared authorization module:
 
    ```bash
@@ -62,7 +71,7 @@ Keep database/Auth/Storage/Edge Functions on Supabase. You do not need a MySQL d
 
    These commands require your Supabase CLI and account access. Preserve `supabase/config.toml`; functions with gateway JWT checks disabled validate their callers in code. Never add a service-role key to browser code.
 7. Configure `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, and `TWILIO_FROM_NUMBER` in **Supabase Edge Function secrets**. Phone verification now requires real delivery and authenticated callers; no development code is returned or logged. Apply the migration before switching the phone function.
-8. Optional AI/Resend credentials also belong in Supabase secrets. Notification delivery is limited to admins/service-role schedulers and pending rows. Normal browser users cannot write the notification outbox under the existing RLS policies; automatic application/message email generation needs a trusted server-side workflow before enabling it. In-app jobs/messages remain separate from email delivery.
+8. Optional AI/Resend credentials also belong in Supabase secrets. Notification delivery is limited to admins/service-role schedulers: batches select pending rows, and explicit notification IDs may retry failed rows. Each notification uses a stable Resend idempotency key. In-progress and ambiguous outcomes use `uncertain`, which is excluded from both batches and explicit retries. An administrator must reconcile delivery in Resend: mark it `sent` if delivered, or reset it to `failed` only after confirming non-delivery. Never reset it based on age alone; [idempotency keys expire after 24 hours](https://resend.com/docs/dashboard/emails/idempotency-keys). Normal browser users cannot write the notification outbox under the existing RLS policies; automatic application/message email generation needs a trusted server-side workflow before enabling it. In-app jobs/messages remain separate from email delivery.
 9. Set Supabase Auth **Site URL** to `https://YOUR_DOMAIN` and allow `https://YOUR_DOMAIN/auth/callback` as a redirect URL. Configure production SMTP, email confirmation, rate limits, and recovery emails in Supabase.
 10. For Google OAuth, the authorized redirect URI in Google Cloud is **Supabase's provider callback**: `https://YOUR_PROJECT_REF.supabase.co/auth/v1/callback` (or the callback shown by Supabase). The application callback `/auth/callback` belongs in Supabase's allowed redirect list. Keep the Google client secret in the provider settings.
 

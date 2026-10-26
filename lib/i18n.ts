@@ -718,6 +718,7 @@ export const translations = {
     'alerts.statusPending': 'Bekliyor',
     'alerts.statusSent': 'Gönderildi',
     'alerts.statusFailed': 'Başarısız',
+    'alerts.statusUncertain': 'Teslimat doğrulanmadı',
 
     // News page
     'nav.news': 'Haberler',
@@ -1875,6 +1876,7 @@ export const translations = {
     'alerts.statusPending': 'Pending',
     'alerts.statusSent': 'Sent',
     'alerts.statusFailed': 'Failed',
+    'alerts.statusUncertain': 'Delivery unconfirmed',
 
     // News page
     'nav.news': 'News',
@@ -3011,6 +3013,7 @@ export const translations = {
     'alerts.statusPending': 'قيد الانتظار',
     'alerts.statusSent': 'تم الإرسال',
     'alerts.statusFailed': 'فشل',
+    'alerts.statusUncertain': 'التسليم غير مؤكد',
 
     // News page
     'nav.news': 'الأخبار',

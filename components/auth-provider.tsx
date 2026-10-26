@@ -63,8 +63,6 @@ interface AuthContextValue {
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<Profile>) => Promise<{ error: string | null }>;
   refreshProfile: () => Promise<void>;
-  sendPhoneOtp: (phone: string) => Promise<{ error: string | null }>;
-  verifyPhoneOtp: (phone: string, token: string) => Promise<{ error: string | null }>;
   resendEmailVerification: (email: string) => Promise<{ error: string | null }>;
 }
 
@@ -80,8 +78,6 @@ const AuthContext = createContext<AuthContextValue>({
   signOut: async () => {},
   updateProfile: async () => ({ error: 'not implemented' }),
   refreshProfile: async () => {},
-  sendPhoneOtp: async () => ({ error: 'not implemented' }),
-  verifyPhoneOtp: async () => ({ error: 'not implemented' }),
   resendEmailVerification: async () => ({ error: 'not implemented' }),
 });
 
@@ -250,26 +246,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (session?.user) await fetchProfile(session.user.id);
   }, [session, fetchProfile]);
 
-  const sendPhoneOtp = useCallback(async (phone: string) => {
-    if (!isSupabaseConfigured) return { error: 'Phone verification is not configured yet.' };
-
-    // Accepts any phone number in international format (e.g., +90 5xx xxx xx xx).
-    // To restrict to specific area codes only, validate the prefix here before sending:
-    //   const allowed = ['+90', '+1', '+44'];
-    //   if (!allowed.some(p => phone.startsWith(p))) return { error: 'Unsupported area code' };
-    const { error } = await supabase.auth.signInWithOtp({ phone });
-    return { error: error?.message || null };
-  }, []);
-
-  const verifyPhoneOtp = useCallback(async (phone: string, token: string) => {
-    if (!isSupabaseConfigured) return { error: 'Phone verification is not configured yet.' };
-
-    const { data, error } = await supabase.auth.verifyOtp({ phone, token, type: 'sms' });
-    if (error) return { error: error.message };
-    if (data.user) await fetchProfile(data.user.id);
-    return { error: null };
-  }, [fetchProfile]);
-
   const resendEmailVerification = useCallback(async (email: string) => {
     if (!isSupabaseConfigured) return { error: 'Email verification is not configured yet.' };
 
@@ -281,7 +257,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider value={{
       session, user: session?.user || null, profile, loading, isGoogleUser,
       signIn, signInWithGoogle, signUp, signOut, updateProfile, refreshProfile,
-      sendPhoneOtp, verifyPhoneOtp, resendEmailVerification,
+      resendEmailVerification,
     }}>
       {children}
     </AuthContext.Provider>

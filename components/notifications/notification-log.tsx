@@ -47,6 +47,7 @@ export function NotificationsTab() {
               pending: { icon: Clock, className: 'bg-accent/15 text-accent-foreground border-accent/30', label: 'Pending' },
               sent: { icon: CheckCircle2, className: 'bg-success/15 text-success border-success/30', label: 'Sent' },
               failed: { icon: XCircle, className: 'bg-destructive/10 text-destructive border-destructive/30', label: 'Failed' },
+              uncertain: { icon: Clock, className: 'bg-accent/15 text-accent-foreground border-accent/30', label: 'Delivery unconfirmed' },
             };
             const config = statusConfig[notif.status] || statusConfig.pending;
             const StatusIcon = config.icon;

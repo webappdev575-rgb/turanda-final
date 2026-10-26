@@ -184,7 +184,7 @@ export interface CommodityCategory {
   translation_ar: string;
 }
 
-export type NotificationStatus = 'pending' | 'sent' | 'failed';
+export type NotificationStatus = 'pending' | 'sent' | 'failed' | 'uncertain';
 export type NotificationType = 'job_application' | 'application_status' | 'new_message';
 
 export type SenderRole = 'employer' | 'applicant';

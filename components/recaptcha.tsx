@@ -34,7 +34,7 @@ interface RecaptchaProps {
 export function Recaptcha({ onVerify, action, className, disabled }: RecaptchaProps) {
   const [status, setStatus] = useState<'loading' | 'verified' | 'error'>('loading');
   const callback = useRef(onVerify);
-  callback.current = onVerify;
+  useEffect(() => { callback.current = onVerify; }, [onVerify]);
   useEffect(() => {
     let cancelled = false;
     const controller = new AbortController();

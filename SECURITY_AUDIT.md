@@ -53,7 +53,7 @@ The original job migration explicitly documented shared/public MVP access (`2026
 ## Remaining launch work
 
 1. Apply both migrations and deploy the changed Edge Functions. Local source fixes do not change the live Supabase project.
-2. Verify and assign existing job owners. Review legacy conversations/nullable applicant IDs; this patch protects new conversation creation and identifier updates, not historical identity correctness.
+2. Verify and assign existing job owners. Missing conversation applicant IDs are backfilled only from identified applicants whose linked application, job and verified employer match. Ownerless or mismatched rows remain untouched; use the deployment guide’s trusted repair after verifying job ownership. Review other legacy identities and applications with no applicant; existing nonempty participant IDs are not rewritten.
 3. Review existing roles, phone-verification flags, featured/payment records, and test accounts for historical misuse. Correct data through a trusted administrative process; this patch does not silently rewrite it.
 4. Configure Supabase-native bot protection and rate limits. The browser's reCAPTCHA verification can be skipped by clients talking directly to Supabase; RLS and provider-level controls remain required. The verification endpoint also needs host-level request throttling.
 5. Review remaining profile exposure under the existing authenticated profile-read policy. It can expose profile contact/location/preferences to other signed-in accounts. Field-level privacy and a public profile view need a separate product/data-access decision; job/application ownership does not make all profiles private.

@@ -83,6 +83,13 @@ BEGIN
 END;
 $$;
 REVOKE ALL ON FUNCTION public.guard_conversation_participants() FROM PUBLIC, anon, authenticated;
+-- Repair missing participants only when the application and verified job owner match.
+UPDATE public.conversations AS c
+SET applicant_id = a.applicant_id
+FROM public.applications AS a
+WHERE a.id = c.application_id AND c.applicant_id IS NULL AND a.applicant_id IS NOT NULL
+  AND a.job_id = c.job_id
+  AND EXISTS (SELECT 1 FROM public.jobs j WHERE j.id = c.job_id AND j.employer_id = c.employer_id);
 CREATE TRIGGER guard_conversation_participants BEFORE UPDATE ON public.conversations
 FOR EACH ROW EXECUTE FUNCTION public.guard_conversation_participants();
 -- The original message contract permits recipients to mark messages as read;
