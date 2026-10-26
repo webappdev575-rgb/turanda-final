@@ -453,25 +453,6 @@ const GOV_SOURCES: GovSource[] = [
   { key: "aa", name: "Anadolu Ajansi", rssFeed: "https://www.aa.com.tr/rss/tarim", agencyType: "Wire Service", sector: "Wire Coverage", category: "general" },
 ];
 
-// Reservoir-sampled daily fallback pool — used when live RSS feeds are
-// unreachable so the site still grows by 1-2 posts per day.
-const DAILY_FALLBACK_POOL: { title: string; summary: string; category: string; source_key: string; sector: string; agency_type: string }[] = [
-  { title: "Tarim ve Orman Bakanligi Buyukbas Hayvancilik Destegi Basvurularini Guncelledi", summary: "Bakanlik, buyukbas hayvancilik desteklerinde yeni donem basvuru kosullarini duyurdu. Damizlik disi sigir desteklemesi basina uygulanacak tutarlar guncellendi.", category: "policy", source_key: "tarimorman", sector: "Central Policy & Extension", agency_type: "Central Ministry" },
-  { title: "TMO Bu Donem Ilk Kez Yulaf Mudahale Alimi Yapti", summary: "TMO, ic piyasa fiyatlarini dengelemek icin bu sezon ilk kez yulaf mudahale alimi gerceklestirdi. Alim fiyati ton basina 8.900 TL olarak uygulandi.", category: "market", source_key: "tmo", sector: "Grains & Cereals", agency_type: "State-Owned Enterprise" },
-  { title: "ESK Yeni Donem Sut Alim Taban Fiyatini Duyurdu", summary: "Et ve Sut Kurumu, yeni donem ici sut alim taban fiyatini litre basina guncelledi. Fiyat geccen yila gore yuzde 12 artis gosterdi.", category: "market", source_key: "esk", sector: "Livestock & Dairy", agency_type: "State-Owned Enterprise" },
-  { title: "DSI Yeni Baraj Sulamasinda Su Teslim Baslangici Aciklandi", summary: "DSI, yeni tamamlanan barajin sulama sebekesinden su teslimine baslama tarihini ilgililere duyurdu. Tarimsal sulama randimani yuzde 85 hedefleniyor.", category: "policy", source_key: "dsi", sector: "Irrigation & Water", agency_type: "Water & Infrastructure" },
-  { title: "TKDK IPARD Yatirimlari Icin Yeni Hibe Cagrisi Acildi", summary: "TKDK, tarimsal isleme ve pazarlama yatirimlari icin yeni bir hibe cagrisi duyurdu. Basvurular online olarak alinacak.", category: "policy", source_key: "tkdk", sector: "Grants & EU IPARD", agency_type: "Grants & Financing" },
-  { title: "TARSIM Dolu Hasari Odemelerinde Yeni Donem Basladi", summary: "TARSIM, dolu hasari tazminat odemelerinde yeni donemi baslatti. Hasar tespit surecleri hizlandirilarak odemeler oncelikli olarak yapiliyor.", category: "policy", source_key: "tarsim", sector: "Risk & Disaster Relief", agency_type: "Insurance & Risk" },
-  { title: "TUIK Yeni Donem Tarimsal Uretim Verilerini Yayimladi", summary: "TUIK, yeni donem tarimsal uretim istatistiklerini yayimladi. Tahil ve baklagil uretiminde gecen yila gore artis gozlendi.", category: "market", source_key: "tuik", sector: "Statistics", agency_type: "Statistics & Legislation" },
-  { title: "Resmi Gazete: Su Urünleri Yönetmeligi Guncellendi", summary: "Su urunleri yetistiriciligi ve avciligini duzenleyen yonetmelikte degisiklik yayimlandi. Yeni lisans kosullari ve koruma alanlari tanimlandi.", category: "policy", source_key: "resmigazete", sector: "Legislation", agency_type: "Statistics & Legislation" },
-  { title: "Tarim Kredi Gubre Fiyatlarinda Yeni Indirim Duyurdu", summary: "Tarim Kredi Kooperatifleri, tarimsal girdi fiyatlarinda yeni indirim duyurdu. Indirim taban ve potas gubrelerini kapsiyor.", category: "market", source_key: "tarimkredi", sector: "Producer Credit & Inputs", agency_type: "Producer Cooperative" },
-  { title: "CAYKUR Yas Cay Alim Fiyatlarini Guncelledi", summary: "CAYKUR, yas cay alim fiyatinin guncellendigini duyurdu. Yeni fiyat, ureticiya daha iyi bir kazanc saglamayi hedefliyor.", category: "market", source_key: "caykur", sector: "Tea & Industrial Crops", agency_type: "State-Owned Enterprise" },
-  { title: "TURKSEKER Seker Pancari Alim Tarifesi Yayimlandi", summary: "TURKSEKER, yeni donem seker pancari alim tarifesi ve ozendirme primi kosullarini yayimladi.", category: "market", source_key: "turkseker", sector: "Sugar & Sweeteners", agency_type: "State-Owned Enterprise" },
-  { title: "TAGEM Yerli Bugday Cesidi Ile Uluslararasi Tescil Elde Etti", summary: "TAGEM gelistirilen yerli bugday cesidi, uluslararasi tescil belgesi alarak yurt disinda da yetistirilmeye hak kazandi.", category: "general", source_key: "tagem", sector: "Research & Disease Control", agency_type: "Research & Extension" },
-  { title: "TIGEM Yeni Donem Damizlik Koy Satis Ilani Yayimladi", summary: "TIGEM, yeni donem damizlik koy satislari icin ihale ilani yayimladi. Basvurular ciftci kayit sistemleri uzerinden alinacak.", category: "general", source_key: "tigem", sector: "Seeds & State Farming", agency_type: "State-Owned Enterprise" },
-  { title: "AA: Tarimsal Ihracat Yeni Donemde Rekor Kirdi", summary: "Anadolu Ajansi verilerine gore tarimsal urun ihracati yeni donemde rekor kirdi. Zeytinyagi ve findik Ihracatinda belirgin artis oldu.", category: "general", source_key: "aa", sector: "Wire Coverage", agency_type: "Wire Service" },
-];
-
 async function fetchGovSource(
   supabase: ReturnType<typeof createClient>,
   src: GovSource,
@@ -520,37 +501,10 @@ async function fetchGovSource(
   }
 }
 
-async function pickDailyFallbacks(
-  supabase: ReturnType<typeof createClient>,
-  count: number,
-): Promise<NewsArticle[]> {
-  const dayIndex = Math.floor(Date.now() / 86400000);
-  const picked: NewsArticle[] = [];
-  for (let i = 0; i < count; i++) {
-    const entry = DAILY_FALLBACK_POOL[(dayIndex * 7 + i * 3) % DAILY_FALLBACK_POOL.length];
-    const source = GOV_SOURCES.find((s) => s.key === entry.source_key);
-    if (!source) continue;
-    picked.push({
-      title: entry.title,
-      summary: entry.summary,
-      category: entry.category,
-      region: "all",
-      source: source.name,
-      url: "",
-      published_at: new Date().toISOString(),
-      agency_type: entry.agency_type,
-      sector: entry.sector,
-      source_key: entry.source_key,
-    });
-  }
-  return picked;
-}
-
 async function runGovSourcesMode(
   supabase: ReturnType<typeof createClient>,
   sourceKey?: string,
-  dailyMode?: boolean,
-): Promise<{ ingested: number; sources: { key: string; fetched: number }[]; fallback: number }> {
+): Promise<{ ingested: number; sources: { key: string; fetched: number }[] }> {
   const sources = sourceKey ? GOV_SOURCES.filter((s) => s.key === sourceKey) : GOV_SOURCES;
   const results: { key: string; fetched: number }[] = [];
   let total = 0;
@@ -563,19 +517,7 @@ async function runGovSourcesMode(
     await new Promise((r) => setTimeout(r, 400));
   }
 
-  let fallbackCount = 0;
-  if (dailyMode && total < 2) {
-    const fallbacks = await pickDailyFallbacks(supabase, 2 - total);
-    if (fallbacks.length > 0) {
-      const { data, error } = await upsertArticles(supabase, fallbacks);
-      if (!error) {
-        fallbackCount = data?.length ?? 0;
-        total += fallbackCount;
-      }
-    }
-  }
-
-  return { ingested: total, sources: results, fallback: fallbackCount };
+  return { ingested: total, sources: results };
 }
 
 Deno.serve(async (req: Request) => {
@@ -602,9 +544,9 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Mode 0: Government sources (POST { mode: "gov_sources", sourceKey?, daily? })
+    // Mode 0: Government sources (POST { mode: "gov_sources", sourceKey? })
     if (body.mode === "gov_sources") {
-      const result = await runGovSourcesMode(supabase, body.sourceKey, body.daily === true);
+      const result = await runGovSourcesMode(supabase, body.sourceKey);
       const ingestedRows = result.ingested > 0
         ? await supabase
             .from("news_articles")
@@ -750,10 +692,10 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Mode 4: Daily scheduled auto-post (POST { daily: true }) —
-    // keeps the site growing 1-2 posts per day with fallback pool
+    // Mode 4: Daily scheduled fetch (POST { daily: true }) —
+    // fetches live RSS feeds only; no synthetic fallback content
     if (body.daily === true) {
-      const result = await runGovSourcesMode(supabase, undefined, true);
+      const result = await runGovSourcesMode(supabase);
       return new Response(
         JSON.stringify({ success: true, ...result }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },

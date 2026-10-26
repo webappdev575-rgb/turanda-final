@@ -32,7 +32,9 @@ export interface Job {
   location: string;
   latitude: number;
   longitude: number;
-  wage: number;
+  wage: number | null;
+  wage_min: number | null;
+  wage_max: number | null;
   wage_unit: string;
   duration: string;
   requirements: string[];
@@ -44,6 +46,18 @@ export interface Job {
   payment_status: PaymentStatus;
   skills: string[];
   language: JobLanguage;
+  title_tr: string | null;
+  title_en: string | null;
+  title_ar: string | null;
+  description_tr: string | null;
+  description_en: string | null;
+  description_ar: string | null;
+  location_tr: string | null;
+  location_en: string | null;
+  location_ar: string | null;
+  requirements_tr: string[] | null;
+  requirements_en: string[] | null;
+  requirements_ar: string[] | null;
   created_at: string;
 }
 
@@ -73,7 +87,9 @@ export interface JobInput {
   location: string;
   latitude: number;
   longitude: number;
-  wage: number;
+  wage?: number | null;
+  wage_min?: number | null;
+  wage_max?: number | null;
   wage_unit: string;
   duration: string;
   requirements: string[];

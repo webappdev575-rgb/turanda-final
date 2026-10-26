@@ -9,6 +9,7 @@ import { WAGE_UNIT_LABELS } from '@/lib/constants';
 import { useI18n } from '@/components/i18n-provider';
 import { translateJobType, getJobTypeColor, getJobTypeIcon } from '@/lib/translations';
 import { IconRenderer } from '@/components/shared/icon-renderer';
+import { formatWageRange, getJobTranslatedField } from '@/lib/utils';
 
 interface JobCardProps {
   job: Job;
@@ -21,15 +22,16 @@ export function JobCard({ job, onApply, onView }: JobCardProps) {
   const typeColor = getJobTypeColor(job.job_type);
   const typeIcon = getJobTypeIcon(job.job_type);
   const wageUnitLabel = WAGE_UNIT_LABELS[job.wage_unit] || job.wage_unit;
+  const wageText = formatWageRange(job.wage_min, job.wage_max, job.wage, wageUnitLabel);
   const tier = job.featured_tier ?? 'standard';
   const isPinned = tier === 'pinned';
   const isFeatured = tier === 'featured';
 
   const cardClass = isPinned
-    ? 'group relative overflow-hidden border-2 border-emerald-400/50 bg-gradient-to-br from-emerald-50/40 to-transparent p-5 transition-all hover:shadow-xl hover:border-emerald-400/70 animate-fade-in-up motion-safe:hover:scale-[1.015]'
+    ? 'group relative overflow-hidden border-2 border-emerald-400/50 bg-card p-5 transition-all hover:shadow-xl hover:border-emerald-400/70 animate-fade-in-up motion-safe:hover:scale-[1.015]'
     : isFeatured
-      ? 'group relative overflow-hidden border-2 border-amber-400/50 bg-gradient-to-br from-amber-50/40 to-transparent p-5 transition-all hover:shadow-xl hover:border-amber-400/70 animate-fade-in-up motion-safe:hover:scale-[1.015]'
-      : 'group relative overflow-hidden border-border p-5 transition-all hover:shadow-lg hover:border-primary/30 animate-fade-in-up motion-safe:hover:scale-[1.015]';
+      ? 'group relative overflow-hidden border-2 border-amber-400/50 bg-card p-5 transition-all hover:shadow-xl hover:border-amber-400/70 animate-fade-in-up motion-safe:hover:scale-[1.015]'
+      : 'group relative overflow-hidden border-border bg-card p-5 transition-all hover:shadow-lg hover:border-primary/30 animate-fade-in-up motion-safe:hover:scale-[1.015]';
 
   return (
     <Card className={cardClass}>
@@ -59,14 +61,14 @@ export function JobCard({ job, onApply, onView }: JobCardProps) {
               <Badge variant="secondary" className="bg-muted text-muted-foreground">{t('job.closed')}</Badge>
             )}
           </div>
-          <h3 className="text-lg font-bold text-foreground leading-tight">{job.title}</h3>
+          <h3 className="text-lg font-bold text-foreground leading-tight">{getJobTranslatedField(job, 'title', locale) as string}</h3>
           <p className="mt-0.5 text-sm font-medium text-secondary">{job.farm_name}</p>
         </div>
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
         <div className="flex items-center gap-1.5 text-muted-foreground">
-          <MapPin className="h-4 w-4 text-secondary" /><span>{job.location}</span>
+          <MapPin className="h-4 w-4 text-secondary" /><span>{getJobTranslatedField(job, 'location', locale) as string}</span>
         </div>
         <div className="flex items-center gap-1.5 text-muted-foreground">
           <Clock className="h-4 w-4 text-secondary" /><span>{job.duration}</span>
@@ -74,9 +76,11 @@ export function JobCard({ job, onApply, onView }: JobCardProps) {
         <div className="flex items-center gap-1.5 text-muted-foreground">
           <Users className="h-4 w-4 text-secondary" /><span>{t('job.openings', { count: job.openings })}</span>
         </div>
-        <div className="flex items-center gap-1.5 font-semibold text-primary">
-          <Banknote className="h-4 w-4" /><span>₺{job.wage.toLocaleString('tr-TR')}/{wageUnitLabel}</span>
-        </div>
+        {wageText && (
+          <div className="flex items-center gap-1.5 font-semibold text-primary">
+            <Banknote className="h-4 w-4" /><span>{wageText}</span>
+          </div>
+        )}
       </div>
 
       <p className="mt-3 line-clamp-2 text-sm text-muted-foreground">{job.description}</p>

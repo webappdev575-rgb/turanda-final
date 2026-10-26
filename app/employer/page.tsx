@@ -19,7 +19,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { WAGE_UNIT_LABELS } from '@/lib/constants';
 import { supabase } from '@/lib/supabase';
-import { cn } from '@/lib/utils';
+import { cn, formatWageRange } from '@/lib/utils';
 import { useI18n } from '@/components/i18n-provider';
 import { useAuth } from '@/components/auth-provider';
 import type { Job, Application, FeaturedTier } from '@/lib/types';
@@ -190,6 +190,7 @@ export default function EmployerPage() {
             <div className="space-y-3">
               {jobs.map((job) => {
                 const wageUnitLabel = WAGE_UNIT_LABELS[job.wage_unit] || job.wage_unit;
+                const wageText = formatWageRange(job.wage_min, job.wage_max, job.wage, wageUnitLabel);
                 const remaining = daysLeft(job.featured_until);
                 const isPinned = job.featured_tier === 'pinned';
                 const isFeatured = job.featured_tier === 'featured';
@@ -221,7 +222,7 @@ export default function EmployerPage() {
                             </Badge>
                           )}
                         </div>
-                        <p className="mt-0.5 text-sm text-muted-foreground">{job.farm_name} · {job.location} · {job.openings} · ₺{job.wage.toLocaleString('tr-TR')}/{wageUnitLabel}</p>
+                        <p className="mt-0.5 text-sm text-muted-foreground">{job.farm_name} · {job.location} · {job.openings}{wageText ? ` · ${wageText}` : ''}</p>
                       </div>
                       <div className="flex items-center gap-2">
                         {/* Hover upgrade CTA for free listings */}

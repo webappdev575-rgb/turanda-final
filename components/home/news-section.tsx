@@ -134,8 +134,8 @@ export function HomeNewsSection({ embedded = false }: { embedded?: boolean }) {
                       priority
                     />
                   ) : (
-                    <div className="flex h-full items-center justify-center bg-gradient-to-br from-primary/10 to-secondary/5">
-                      <Newspaper className="h-12 w-12 text-secondary/40" />
+                    <div className="flex h-full items-center justify-center bg-gradient-to-br from-neutral-200/60 to-neutral-100/30 dark:from-neutral-800/60 dark:to-neutral-900/30">
+                      <Newspaper className="h-12 w-12 text-neutral-400" />
                     </div>
                   )}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
@@ -178,8 +178,8 @@ export function HomeNewsSection({ embedded = false }: { embedded?: boolean }) {
                         sizes="(max-width: 640px) 100vw, 25vw"
                       />
                     ) : (
-                      <div className="flex h-full items-center justify-center bg-gradient-to-br from-primary/10 to-secondary/5">
-                        <Newspaper className="h-8 w-8 text-secondary/40" />
+                      <div className="flex h-full items-center justify-center bg-gradient-to-br from-neutral-200/60 to-neutral-100/30 dark:from-neutral-800/60 dark:to-neutral-900/30">
+                        <Newspaper className="h-8 w-8 text-neutral-400" />
                       </div>
                     )}
                     <div className="absolute top-2 left-2">

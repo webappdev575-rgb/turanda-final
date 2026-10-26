@@ -44,7 +44,8 @@ export function PostJobForm({ onSubmit, onSuccess }: PostJobFormProps) {
   const [jobType, setJobType] = useState('');
   const [description, setDescription] = useState('');
   const [location, setLocation] = useState('');
-  const [wage, setWage] = useState('');
+  const [wageMin, setWageMin] = useState('');
+  const [wageMax, setWageMax] = useState('');
   const [wageUnit, setWageUnit] = useState('day');
   const [duration, setDuration] = useState('');
   const [openings, setOpenings] = useState('1');
@@ -75,10 +76,12 @@ export function PostJobForm({ onSubmit, onSuccess }: PostJobFormProps) {
     if (!title.trim() || !farmName.trim() || !jobType || !description.trim() || !location || !duration.trim()) { setError(t('form.errorRequired')); return; }
     if (!recaptchaToken) { setError(t('recaptcha.errorRequired')); return; }
     const coords = CITY_COORDS[location] || { lat: 39.0, lng: 35.0 };
+    const minVal = wageMin.trim() ? parseFloat(wageMin) : null;
+    const maxVal = wageMax.trim() ? parseFloat(wageMax) : null;
     const input: JobInput = {
       title: title.trim(), farm_name: farmName.trim(), job_type: jobType as JobInput['job_type'],
       description: description.trim(), location, latitude: coords.lat, longitude: coords.lng,
-      wage: parseFloat(wage) || 0, wage_unit: wageUnit, duration: duration.trim(),
+      wage: null, wage_min: minVal, wage_max: maxVal, wage_unit: wageUnit, duration: duration.trim(),
       requirements, openings: parseInt(openings) || 1, skills, language,
       is_featured: featuredTier !== 'standard', featured_tier: featuredTier,
       payment_status: featuredTier === 'standard' ? 'free' : 'pending',
@@ -100,7 +103,7 @@ export function PostJobForm({ onSubmit, onSuccess }: PostJobFormProps) {
 
   const resetForm = () => {
     setTitle(''); setFarmName(''); setJobType(''); setDescription(''); setLocation('');
-    setWage(''); setWageUnit('day'); setDuration(''); setOpenings('1');
+    setWageMin(''); setWageMax(''); setWageUnit('day'); setDuration(''); setOpenings('1');
     setRequirements([]); setSkills([]); setLanguage('tr'); setFeaturedTier('standard');
   };
 
@@ -186,8 +189,12 @@ export function PostJobForm({ onSubmit, onSuccess }: PostJobFormProps) {
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <div className="space-y-2">
-            <Label htmlFor="wage">{t('form.wage')}</Label>
-            <Input id="wage" type="number" min="0" value={wage} onChange={(e) => setWage(e.target.value)} placeholder="850" />
+            <Label htmlFor="wage-min">{t('form.wageMin')}</Label>
+            <Input id="wage-min" type="number" min="0" value={wageMin} onChange={(e) => setWageMin(e.target.value)} placeholder="800" />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="wage-max">{t('form.wageMax')}</Label>
+            <Input id="wage-max" type="number" min="0" value={wageMax} onChange={(e) => setWageMax(e.target.value)} placeholder="1200" />
           </div>
           <div className="space-y-2">
             <Label>{t('form.wageUnit')}</Label>
@@ -196,7 +203,9 @@ export function PostJobForm({ onSubmit, onSuccess }: PostJobFormProps) {
               <SelectContent>{WAGE_UNITS.map((u) => (<SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>))}</SelectContent>
             </Select>
           </div>
-          <div className="space-y-2">
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div className="space-y-2 sm:col-span-3">
             <Label htmlFor="duration">{t('form.duration')}</Label>
             <Input id="duration" value={duration} onChange={(e) => setDuration(e.target.value)} placeholder={t('form.durationPlaceholder')} />
           </div>
@@ -249,7 +258,7 @@ export function PostJobForm({ onSubmit, onSuccess }: PostJobFormProps) {
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <Label className="text-sm font-semibold">{t('tier.chooseTier')}</Label>
-            <Button type="button" variant="ghost" size="sm" onClick={() => setComparisonOpen(true)}>
+            <Button type="button" size="sm" onClick={() => setComparisonOpen(true)} className="bg-orange-500 font-bold text-white hover:bg-orange-600 dark:text-white">
               {t('tier.compare')}
             </Button>
           </div>

@@ -150,8 +150,8 @@ export function MobileDock() {
             <div className="flex w-14 shrink-0 justify-center">
               <button
                 type="button"
-                onClick={() => router.push('/jobs')}
-                aria-label={t('dock.applyWithDoc')}
+                onClick={() => router.push(isAdmin || profile?.is_moderator === true ? '/admin/news-composer' : '/jobs')}
+                aria-label={isAdmin || profile?.is_moderator === true ? t('dock.admin') : t('dock.applyWithDoc')}
                 className="flex h-14 w-14 -translate-y-3 items-center justify-center rounded-full bg-[#14563d] text-white shadow-lg transition-transform hover:scale-105 dark:bg-[#c9e7b8] dark:text-[#14563d]"
               >
                 <FileText className="h-6 w-6" />
@@ -187,7 +187,7 @@ export function MobileDock() {
         </div>
       </nav>
 
-      <div className="fixed right-4 bottom-4 z-50 flex flex-col items-center gap-3 lg:right-6 lg:bottom-6">
+      <div className="fixed right-4 bottom-24 z-50 flex flex-col items-center gap-3 lg:right-6 lg:bottom-6">
         <BackToTopButton />
         <MessagesBubble />
       </div>

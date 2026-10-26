@@ -21,7 +21,7 @@ import { searchPlaces } from '@/lib/turkey-districts';
 import { reverseGeocode } from '@/lib/geocoding';
 import type { Job } from '@/lib/types';
 import type { PlaceMatch } from '@/lib/turkey-districts';
-import { cn, distanceKm } from '@/lib/utils';
+import { cn, distanceKm, formatWageRange, getJobTranslatedField } from '@/lib/utils';
 import { useI18n } from '@/components/i18n-provider';
 import { useTheme } from '@/components/theme-provider';
 import { Button } from '@/components/ui/button';
@@ -79,7 +79,7 @@ export function JobMapView({
   onApply,
   selectedJobId,
 }: JobMapViewProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { theme } = useTheme();
   const isDark = theme === 'dark';
 
@@ -737,7 +737,7 @@ export function JobMapView({
           {popupJob && (
             <div className="pointer-events-auto absolute left-1/2 top-3 z-[1000] w-72 -translate-x-1/2 overflow-hidden rounded-xl border border-border bg-background shadow-xl animate-fade-in">
               <div className="flex items-start justify-between gap-2 border-b border-border px-3 py-2">
-                <p className="line-clamp-1 text-sm font-bold text-foreground">{popupJob.title}</p>
+                <p className="line-clamp-1 text-sm font-bold text-foreground">{getJobTranslatedField(popupJob, 'title', locale) as string}</p>
                 <button
                   onClick={() => setPopupJob(null)}
                   className="shrink-0 rounded p-0.5 text-muted-foreground transition-colors hover:text-foreground"
@@ -750,15 +750,21 @@ export function JobMapView({
                 <p className="font-medium text-secondary">{popupJob.farm_name}</p>
                 <div className="flex items-center gap-1.5 text-muted-foreground">
                   <MapPin className="h-3 w-3 shrink-0" />
-                  <span className="truncate">{popupJob.location}</span>
+                  <span className="truncate">{getJobTranslatedField(popupJob, 'location', locale) as string}</span>
                   <span className="shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-foreground">
                     ~{popupJobDist} km
                   </span>
                 </div>
-                <div className="flex items-center gap-1.5 font-semibold text-primary">
-                  <Banknote className="h-3 w-3 shrink-0" />
-                  ₺{popupJob.wage.toLocaleString('tr-TR')}/{WAGE_UNIT_LABELS[popupJob.wage_unit] || popupJob.wage_unit}
-                </div>
+                {(() => {
+                  const wl = WAGE_UNIT_LABELS[popupJob.wage_unit] || popupJob.wage_unit;
+                  const wt = formatWageRange(popupJob.wage_min, popupJob.wage_max, popupJob.wage, wl);
+                  return wt ? (
+                    <div className="flex items-center gap-1.5 font-semibold text-primary">
+                      <Banknote className="h-3 w-3 shrink-0" />
+                      {wt}
+                    </div>
+                  ) : null;
+                })()}
               </div>
               <div className="flex gap-1.5 px-3 pb-2.5">
                 <Button size="sm" variant="outline" className="h-7 flex-1 text-xs" onClick={() => onJobSelect?.(popupJob)}>

@@ -32,6 +32,19 @@ export function FigmaHero() {
   const [cityOpen, setCityOpen] = useState(false);
   const cityRef = useRef<HTMLDivElement | null>(null);
 
+  const heroPhrases: TranslationKey[] = useMemo(
+    () => ['red.heroPhrase1', 'red.heroPhrase2', 'red.heroPhrase3', 'red.heroPhrase4'],
+    [],
+  );
+  const [phraseIndex, setPhraseIndex] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setPhraseIndex((i) => (i + 1) % heroPhrases.length);
+    }, 3500);
+    return () => clearInterval(timer);
+  }, [heroPhrases.length]);
+
   const TR_CHARS: Record<string, string> = { ç: 'c', ğ: 'g', ı: 'i', ö: 'o', ş: 's', ü: 'u' };
   const normalizeTr = (s: string) =>
     s
@@ -116,6 +129,18 @@ export function FigmaHero() {
           <h1 className="w-full max-w-[896px] text-center text-[clamp(2.25rem,7vw,5.5rem)] font-semibold leading-[0.94] tracking-[-0.055em] text-[#15231d] dark:text-[#f5f3eb]">
             {t('red.heroTitle')}
           </h1>
+        </div>
+        <div className="relative flex h-7 w-full max-w-[576px] items-center justify-center pt-4">
+          {heroPhrases.map((phrase, i) => (
+            <p
+              key={phrase}
+              className="absolute inset-0 flex items-center justify-center text-sm font-semibold tracking-wide text-field transition-opacity duration-700 ease-in-out dark:text-[#c9e7b8]"
+              style={{ opacity: i === phraseIndex ? 1 : 0 }}
+              aria-hidden={i !== phraseIndex}
+            >
+              {t(phrase)}
+            </p>
+          ))}
         </div>
         <p className="w-full max-w-[576px] pt-6 text-center text-base leading-6 text-[#617069] dark:text-[#ffffff99]">
           {t('red.heroSubtitle')}
@@ -230,7 +255,7 @@ export function FigmaHero() {
               aria-hidden="true"
             />
             <div className="absolute inset-x-0 top-0 h-48 bg-[linear-gradient(180deg,#fffdf6_0%,#fffdf6_35%,rgba(255,253,246,0)_100%)] dark:bg-[linear-gradient(180deg,#0b1611_0%,#0b1611_35%,rgba(11,22,17,0)_100%)]" />
-            <div className="absolute inset-0 bg-[linear-gradient(0deg,rgba(8,39,29,0.95)_0%,rgba(8,39,29,0.35)_45%,rgba(8,39,29,0)_75%)] dark:bg-[linear-gradient(0deg,rgba(3,15,10,0.95)_0%,rgba(3,15,10,0.4)_45%,rgba(3,15,10,0)_75%)]" />
+            <div className="absolute inset-0 bg-[linear-gradient(0deg,rgba(250,250,248,0.95)_0%,rgba(250,250,248,0.35)_45%,rgba(250,250,248,0)_75%)] dark:bg-[linear-gradient(0deg,rgba(12,14,17,0.95)_0%,rgba(12,14,17,0.4)_45%,rgba(12,14,17,0)_75%)]" />
             <figcaption className="relative z-10 flex h-full w-full flex-col items-center justify-end px-4 pb-10 sm:px-8">
               <Reveal className="w-full max-w-[1205px]" delay={150}>
                 <div className="flex w-full flex-col items-center gap-6 sm:flex-row sm:items-end sm:justify-between sm:gap-16">

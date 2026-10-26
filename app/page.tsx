@@ -56,7 +56,7 @@ function SustainabilityImageCarousel() {
 
 export default function HomePage() {
   const { t } = useI18n();
-  const { prices, registry } = useCommodities();
+  const { prices, registry, exchanges } = useCommodities();
   const { articles } = useNews();
 
   const topPrices = useMemo(() => {
@@ -154,6 +154,7 @@ export default function HomePage() {
                     prices={prices}
                     headline={topPrices[0]}
                     selectable={topPrices.slice(0, 4)}
+                    exchanges={exchanges}
                   />
                 ) : (
                   <div className="grid min-h-[182px] place-items-center text-sm text-[#96a09a]">

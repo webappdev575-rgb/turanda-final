@@ -24,7 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { MAP_CENTER, CITY_COORDS } from '@/lib/constants';
 import { resolvePlaceCoords } from '@/lib/turkey-districts';
 import { geocodeForward } from '@/lib/geocoding';
-import { cn, distanceKm } from '@/lib/utils';
+import { cn, distanceKm, effectiveWage } from '@/lib/utils';
 import { useI18n } from '@/components/i18n-provider';
 import { AdSpace } from '@/components/ads/ad-space';
 import { JobsAdSidebarCard } from '@/components/jobs/jobs-ad-sidebar-card';
@@ -149,8 +149,8 @@ function JobsPageContent() {
 
     return filtered.sort((a, b) => {
       switch (sortBy) {
-        case 'wageDesc': return b.wage - a.wage;
-        case 'wageAsc': return a.wage - b.wage;
+        case 'wageDesc': return effectiveWage(b.wage_min, b.wage_max, b.wage) - effectiveWage(a.wage_min, a.wage_max, a.wage);
+        case 'wageAsc': return effectiveWage(a.wage_min, a.wage_max, a.wage) - effectiveWage(b.wage_min, b.wage_max, b.wage);
         case 'openings': return b.openings - a.openings;
         case 'recommended': {
           const tierA = tierOrder(a.featured_tier);
@@ -206,8 +206,8 @@ function JobsPageContent() {
     };
 
     const cmp: Record<string, ((a: typeof list[0], b: typeof list[0]) => number) | undefined> = {
-      wageDesc: (a, b) => b.job.wage - a.job.wage,
-      wageAsc: (a, b) => a.job.wage - b.job.wage,
+      wageDesc: (a, b) => effectiveWage(b.job.wage_min, b.job.wage_max, b.job.wage) - effectiveWage(a.job.wage_min, a.job.wage_max, a.job.wage),
+      wageAsc: (a, b) => effectiveWage(a.job.wage_min, a.job.wage_max, a.job.wage) - effectiveWage(b.job.wage_min, b.job.wage_max, b.job.wage),
       openings: (a, b) => b.job.openings - a.job.openings,
       recommended: (a, b) =>
         tierOrder(a.job.featured_tier) - tierOrder(b.job.featured_tier) || a.distance - b.distance,

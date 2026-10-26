@@ -2,7 +2,7 @@
 
 import { MapPin, Banknote, Star, Pin, Navigation } from 'lucide-react';
 import type { Job } from '@/lib/types';
-import { cn } from '@/lib/utils';
+import { cn, formatWageRange, getJobTranslatedField } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { WAGE_UNIT_LABELS } from '@/lib/constants';
 import { useI18n } from '@/components/i18n-provider';
@@ -16,11 +16,12 @@ interface JobCompactRowProps {
 }
 
 export function JobCompactRow({ job, distanceKm, selected, onHover, onView }: JobCompactRowProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const tier = job.featured_tier ?? 'standard';
   const isPinned = tier === 'pinned';
   const isFeatured = tier === 'featured';
   const wageUnitLabel = WAGE_UNIT_LABELS[job.wage_unit] || job.wage_unit;
+  const wageText = formatWageRange(job.wage_min, job.wage_max, job.wage, wageUnitLabel);
 
   return (
     <button
@@ -44,13 +45,13 @@ export function JobCompactRow({ job, distanceKm, selected, onHover, onView }: Jo
           <div className="flex items-center gap-1.5">
             {isPinned && <Pin className="h-3 w-3 shrink-0 text-emerald-500" />}
             {isFeatured && !isPinned && <Star className="h-3 w-3 shrink-0 fill-amber-400 text-amber-400" />}
-            <p className="truncate text-sm font-bold text-foreground leading-tight">{job.title}</p>
+            <p className="truncate text-sm font-bold text-foreground leading-tight">{getJobTranslatedField(job, 'title', locale) as string}</p>
           </div>
           <p className="mt-0.5 truncate text-xs font-medium text-secondary">{job.farm_name}</p>
           <div className="mt-1.5 flex items-center gap-2 text-[11px] text-muted-foreground">
             <span className="inline-flex min-w-0 items-center gap-1">
               <MapPin className="h-3 w-3 shrink-0" />
-              <span className="truncate">{job.location}</span>
+              <span className="truncate">{getJobTranslatedField(job, 'location', locale) as string}</span>
             </span>
             {typeof distanceKm === 'number' && (
               <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-muted px-1.5 py-0.5 font-semibold text-foreground">
@@ -61,11 +62,12 @@ export function JobCompactRow({ job, distanceKm, selected, onHover, onView }: Jo
           </div>
         </div>
         <div className="flex shrink-0 flex-col items-end justify-between gap-2">
-          <span className="inline-flex items-center gap-1 text-xs font-bold text-primary">
-            <Banknote className="h-3.5 w-3.5" />
-            ₺{job.wage.toLocaleString('tr-TR')}
-            <span className="font-medium text-muted-foreground">/{wageUnitLabel}</span>
-          </span>
+          {wageText && (
+            <span className="inline-flex items-center gap-1 text-xs font-bold text-primary">
+              <Banknote className="h-3.5 w-3.5" />
+              {wageText}
+            </span>
+          )}
           <span className="rounded-lg border border-border bg-background px-2 py-1 text-[11px] font-semibold text-foreground transition-colors group-hover:border-primary/40 group-hover:text-primary">
             {t('job.details')}
           </span>

@@ -8,6 +8,7 @@ import type { Job } from '@/lib/types';
 import { WAGE_UNIT_LABELS } from '@/lib/constants';
 import { useI18n } from '@/components/i18n-provider';
 import { translateJobType } from '@/lib/translations';
+import { formatWageRange, getJobTranslatedField } from '@/lib/utils';
 
 interface JobDetailDialogProps {
   job: Job | null;
@@ -20,13 +21,14 @@ export function JobDetailDialog({ job, open, onOpenChange, onApply }: JobDetailD
   const { t, locale } = useI18n();
   if (!job) return null;
   const wageUnitLabel = WAGE_UNIT_LABELS[job.wage_unit] || job.wage_unit;
+  const wageText = formatWageRange(job.wage_min, job.wage_max, job.wage, wageUnitLabel);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-background sm:max-w-[560px] max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <Badge className="w-fit mb-1" variant="outline">{translateJobType(job.job_type, locale)}</Badge>
-          <DialogTitle className="text-xl text-primary">{job.title}</DialogTitle>
+          <DialogTitle className="text-xl text-primary">{getJobTranslatedField(job, 'title', locale) as string}</DialogTitle>
           <DialogDescription className="flex items-center gap-1.5"><Building2 className="h-4 w-4" />{job.farm_name}</DialogDescription>
         </DialogHeader>
 
@@ -39,10 +41,10 @@ export function JobDetailDialog({ job, open, onOpenChange, onApply }: JobDetailD
 
         <div className="grid grid-cols-2 gap-3 py-2">
           {[
-            { icon: MapPin, label: t('jobdetail.location'), value: job.location },
+            { icon: MapPin, label: t('jobdetail.location'), value: getJobTranslatedField(job, 'location', locale) as string },
             { icon: Clock, label: t('jobdetail.duration'), value: job.duration },
             { icon: Users, label: t('jobdetail.openings'), value: `${job.openings}` },
-            { icon: Banknote, label: t('jobdetail.wage'), value: `₺${job.wage.toLocaleString('tr-TR')}/${wageUnitLabel}`, highlight: true },
+            ...(wageText ? [{ icon: Banknote, label: t('jobdetail.wage'), value: wageText, highlight: true }] : []),
           ].map((item, i) => (
             <div key={i} className="flex items-center gap-2 rounded-lg bg-muted/50 px-3 py-2">
               <item.icon className="h-4 w-4 text-secondary" />
@@ -56,14 +58,14 @@ export function JobDetailDialog({ job, open, onOpenChange, onApply }: JobDetailD
 
         <div className="space-y-2">
           <h4 className="text-sm font-semibold text-foreground">{t('jobdetail.description')}</h4>
-          <p className="text-sm text-muted-foreground leading-relaxed">{job.description}</p>
+          <p className="text-sm text-muted-foreground leading-relaxed">{getJobTranslatedField(job, 'description', locale) as string}</p>
         </div>
 
         {job.requirements.length > 0 && (
           <div className="space-y-2">
             <h4 className="text-sm font-semibold text-foreground">{t('jobdetail.requirements')}</h4>
             <ul className="space-y-1.5">
-              {job.requirements.map((req, i) => (
+              {(getJobTranslatedField(job, 'requirements', locale) as string[]).map((req, i) => (
                 <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
                   <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" /><span>{req}</span>
                 </li>

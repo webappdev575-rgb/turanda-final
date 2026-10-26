@@ -13,7 +13,7 @@ import {
 } from 'recharts';
 import { useI18n } from '@/components/i18n-provider';
 import { translateCommodity } from '@/lib/translations';
-import type { CommodityPrice } from '@/hooks/use-commodities';
+import type { CommodityPrice, CommodityExchange } from '@/hooks/use-commodities';
 
 type RangeMode = 'daily' | '7d';
 
@@ -29,18 +29,7 @@ interface TooltipState {
   point: ChartPoint;
 }
 
-const WEEKDAY_LOCALES: Record<string, string> = {
-  tr: 'tr-TR',
-  en: 'en-US',
-  ar: 'ar',
-};
-
-function weekdayFormatter(locale: string) {
-  return new Intl.DateTimeFormat(WEEKDAY_LOCALES[locale] ?? locale, { weekday: 'short' });
-}
-
-function buildDailyAverages(prices: CommodityPrice[], commodityName: string, locale: string): ChartPoint[] {
-  const weekdayFmt = weekdayFormatter(locale);
+function buildDailyAverages(prices: CommodityPrice[], commodityName: string): ChartPoint[] {
   const byDate = new Map<string, { sum: number; count: number }>();
   prices.forEach((p) => {
     if (p.commodity_name !== commodityName) return;
@@ -53,33 +42,37 @@ function buildDailyAverages(prices: CommodityPrice[], commodityName: string, loc
   return Array.from(byDate.entries())
     .sort(([a], [b]) => a.localeCompare(b))
     .slice(-7)
-    .map(([day, { sum, count }]) => ({
-      date: day,
-      label: weekdayFmt.format(new Date(`${day}T00:00:00`)),
-      price: count > 0 ? (sum / count) / 1000 : 0,
-    }));
+    .map(([day, { sum, count }]) => {
+      const d = new Date(`${day}T00:00:00`);
+      const label = `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`;
+      return {
+        date: day,
+        label,
+        price: count > 0 ? (sum / count) / 1000 : 0,
+      };
+    });
 }
 
-/** Intraday view: buckets each of the last 1-2 days into 4-hour intervals. */
-function buildIntraday(prices: CommodityPrice[], commodityName: string): ChartPoint[] {
-  const byHour = new Map<number, { sum: number; count: number }>();
-  prices.forEach((p) => {
-    if (p.commodity_name !== commodityName) return;
-    const ts = new Date(`${p.recorded_date.slice(0, 10)}T12:00:00`);
-    // Distribute multiple exchanges across the day so the intraday line has shape.
-    const slot = 8 + (ts.getTime() % 13) * 1.5;
-    const key = Math.floor(slot / 3) * 3;
-    const entry = byHour.get(key) ?? { sum: 0, count: 0 };
-    entry.sum += p.price;
-    entry.count += 1;
-    byHour.set(key, entry);
-  });
-  return Array.from(byHour.entries())
-    .sort(([a], [b]) => a - b)
-    .map(([hour, { sum, count }]) => ({
-      date: `${String(hour).padStart(2, '0')}:00`,
-      label: `${String(hour).padStart(2, '0')}:00`,
-      price: count > 0 ? (sum / count) / 1000 : 0,
+function buildLatestDayByExchange(
+  prices: CommodityPrice[],
+  commodityName: string,
+  exchangeMap: Map<string, string>,
+): ChartPoint[] {
+  const commodityPrices = prices.filter((p) => p.commodity_name === commodityName);
+  if (commodityPrices.length === 0) return [];
+
+  const latestDate = commodityPrices
+    .map((p) => p.recorded_date)
+    .sort()
+    .pop();
+
+  return commodityPrices
+    .filter((p) => p.recorded_date === latestDate)
+    .sort((a, b) => a.price - b.price)
+    .map((p) => ({
+      date: p.recorded_date,
+      label: exchangeMap.get(p.exchange_id) ?? '—',
+      price: p.price / 1000,
     }));
 }
 
@@ -105,10 +98,12 @@ export function CommodityChartCard({
   prices,
   headline,
   selectable,
+  exchanges,
 }: {
   prices: CommodityPrice[];
   headline: CommodityPrice;
   selectable: CommodityPrice[];
+  exchanges: CommodityExchange[];
 }) {
   const { t, locale } = useI18n();
   const [selected, setSelected] = useState(headline.commodity_name);
@@ -121,13 +116,18 @@ export function CommodityChartCard({
 
   const active = selectable.find((s) => s.commodity_name === activeName) ?? headline;
 
-  const series = useMemo(
-    () =>
-      range === '7d'
-        ? buildDailyAverages(prices, activeName, locale)
-        : buildIntraday(prices, activeName),
-    [prices, activeName, range, locale],
+  const exchangeMap = useMemo(
+    () => new Map(exchanges.map((e) => [e.id, e.short_name ?? e.city])),
+    [exchanges],
   );
+
+  const series = useMemo(() => {
+    if (range === '7d') return buildDailyAverages(prices, activeName);
+    const byExchange = buildLatestDayByExchange(prices, activeName, exchangeMap);
+    return byExchange.length >= 2
+      ? byExchange
+      : buildDailyAverages(prices, activeName).slice(-5);
+  }, [prices, activeName, range, exchangeMap]);
 
   const fmt = (value: number) =>
     value.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });

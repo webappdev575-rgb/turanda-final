@@ -6,7 +6,7 @@ import {
   Settings, Image as ImageIcon, Newspaper, LayoutGrid, BarChart3,
   Briefcase, GraduationCap, Loader2, Save, Star, Plus, Trash2,
   Check, Users, Ban, ShieldCheck, Search, Bell, Megaphone, Tags,
-  ClipboardCheck, Sprout,
+  ClipboardCheck, Sprout, Wrench,
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -31,6 +31,7 @@ import { NotificationsTab } from '@/components/notifications/notification-log';
 import { AdsAdminTab } from '@/components/ads/ads-admin-tab';
 import { ReviewQueueTab } from '@/components/admin/review-queue';
 import { CropDevelopmentAdmin } from '@/components/admin/crop-development-admin';
+import { ClassifiedsAdmin } from '@/components/admin/classifieds-admin';
 
 const NEWS_CATEGORIES = ['market', 'general', 'policy', 'weather'];
 const HERO_BG_TYPES = [
@@ -120,6 +121,7 @@ function AdminDashboard() {
           {isAdmin && <TabsTrigger value="academy" className="gap-1.5"><GraduationCap className="h-4 w-4" />Academy</TabsTrigger>}
           {isAdmin && <TabsTrigger value="notifications" className="gap-1.5"><Bell className="h-4 w-4" />Notifications</TabsTrigger>}
           {isAdmin && <TabsTrigger value="ads" className="gap-1.5"><Megaphone className="h-4 w-4" />Ads</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="classifieds" className="gap-1.5"><Wrench className="h-4 w-4" />Classifieds</TabsTrigger>}
           {isAdmin && <TabsTrigger value="users" className="gap-1.5"><Users className="h-4 w-4" />Users</TabsTrigger>}
         </TabsList>
 
@@ -134,6 +136,7 @@ function AdminDashboard() {
         {isAdmin && <TabsContent value="academy"><AcademyAdmin /></TabsContent>}
         {isAdmin && <TabsContent value="notifications"><NotificationsTab /></TabsContent>}
         {isAdmin && <TabsContent value="ads"><AdsAdminTab /></TabsContent>}
+        {isAdmin && <TabsContent value="classifieds"><ClassifiedsAdmin /></TabsContent>}
         {isAdmin && <TabsContent value="users"><UsersTab /></TabsContent>}
       </Tabs>
     </div>

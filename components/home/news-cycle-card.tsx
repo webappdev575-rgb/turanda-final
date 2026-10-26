@@ -72,7 +72,7 @@ export function NewsCycleCard({ articles }: { articles: NewsArticle[] }) {
           sizes="(max-width: 1024px) 100vw, 50vw"
           className="animate-fade-in object-cover"
         />
-        <div className="absolute inset-0 bg-[linear-gradient(0deg,rgba(8,39,29,0.96)_0%,rgba(8,39,29,0.45)_55%,rgba(8,39,29,0.08)_100%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(0deg,rgba(20,22,26,0.92)_0%,rgba(20,22,26,0.4)_55%,rgba(20,22,26,0.05)_100%)] dark:bg-[linear-gradient(0deg,rgba(8,10,13,0.96)_0%,rgba(8,10,13,0.45)_55%,rgba(8,10,13,0.08)_100%)]" />
 
         {current?.is_breaking && (
           <div className="absolute left-6 top-6 z-20 inline-flex items-center gap-1.5 rounded-lg bg-[#dc2626] px-3 py-1.5 shadow-[0px_4px_12px_rgba(220,38,38,0.45)]">
