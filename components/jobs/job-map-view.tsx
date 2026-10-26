@@ -101,6 +101,8 @@ export function JobMapView({
   const provinceLabelsRef = useRef<L.LayerGroup | null>(null);
   const inRangeProvincesRef = useRef<Set<string>>(new Set());
   const suppressMouseUpRef = useRef(false);
+  const selectedRadiusRef = useRef(selectedRadius);
+  selectedRadiusRef.current = selectedRadius;
 
   // ---- Derived data ----
   const filteredJobs = useMemo(() => {
@@ -235,6 +237,27 @@ export function JobMapView({
       setSearchQuery(nearestCity);
     };
 
+    const keepRadiusInsideMap = (lat: number, lng: number) => {
+      const bounds = geoJsonRef.current?.getBounds();
+      if (!bounds) return { lat, lng };
+
+      const radiusKm = selectedRadiusRef.current;
+      const latOffset = radiusKm / 111;
+      const lngOffset = radiusKm / (111 * Math.max(Math.cos((lat * Math.PI) / 180), 0.2));
+      return {
+        lat: Math.min(Math.max(lat, bounds.getSouth() + latOffset), bounds.getNorth() - latOffset),
+        lng: Math.min(Math.max(lng, bounds.getWest() + lngOffset), bounds.getEast() - lngOffset),
+      };
+    };
+
+    const repositionFromMapPoint = (lat: number, lng: number) => {
+      const nextCenter = keepRadiusInsideMap(lat, lng);
+      onCenterChange(nextCenter.lat, nextCenter.lng);
+      map.flyTo([nextCenter.lat, nextCenter.lng], map.getZoom(), { duration: 0.35 });
+      setPopupJob(null);
+      void syncSearchLocation(nextCenter.lat, nextCenter.lng);
+    };
+
     // Map click → set search center (distinguishes click from drag via move threshold)
     let mouseDownPos: { x: number; y: number } | null = null;
     map.on('mousedown', (e: L.LeafletMouseEvent) => {
@@ -243,10 +266,6 @@ export function JobMapView({
     });
     map.on('mouseup', (e: L.LeafletMouseEvent) => {
       if (!mouseDownPos) return;
-      const moved = Math.hypot(
-        e.containerPoint.x - mouseDownPos.x,
-        e.containerPoint.y - mouseDownPos.y,
-      );
       mouseDownPos = null;
       // Close any lingering province tooltips on click/drag
       provinceLayersRef.current.forEach((layer) => {
@@ -256,19 +275,7 @@ export function JobMapView({
         suppressMouseUpRef.current = false;
         return;
       }
-      // If the user barely moved, treat as a click → set center.
-      // If they dragged a meaningful distance, set center where they released.
-      if (moved < 5) {
-        onCenterChange(e.latlng.lat, e.latlng.lng);
-        setPopupJob(null);
-        void syncSearchLocation(e.latlng.lat, e.latlng.lng);
-      } else {
-        // After a drag, set the center at the release point so the radius
-        // search updates to wherever the user let go.
-        onCenterChange(e.latlng.lat, e.latlng.lng);
-        setPopupJob(null);
-        void syncSearchLocation(e.latlng.lat, e.latlng.lng);
-      }
+      repositionFromMapPoint(e.latlng.lat, e.latlng.lng);
     });
 
     return () => {
