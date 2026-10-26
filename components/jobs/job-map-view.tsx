@@ -16,8 +16,9 @@ import {
   ExternalLink,
   Loader2,
 } from 'lucide-react';
-import { RADII, WAGE_UNIT_LABELS, MAP_CENTER, TURKEY_CITIES, CITY_COORDS } from '@/lib/constants';
+import { WAGE_UNIT_LABELS, MAP_CENTER, TURKEY_CITIES, CITY_COORDS } from '@/lib/constants';
 import { searchPlaces } from '@/lib/turkey-districts';
+import { reverseGeocode } from '@/lib/geocoding';
 import type { Job } from '@/lib/types';
 import type { PlaceMatch } from '@/lib/turkey-districts';
 import { cn, distanceKm } from '@/lib/utils';
@@ -92,12 +93,12 @@ export function JobMapView({
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
-  const tileLayerRef = useRef<L.TileLayer | null>(null);
   const geoJsonRef = useRef<L.GeoJSON | null>(null);
   const radiusCircleRef = useRef<L.Circle | null>(null);
   const centerMarkerRef = useRef<L.CircleMarker | null>(null);
   const jobMarkersRef = useRef<Map<string, L.CircleMarker>>(new Map());
   const provinceLayersRef = useRef<L.Layer[]>([]);
+  const provinceLabelsRef = useRef<L.LayerGroup | null>(null);
   const inRangeProvincesRef = useRef<Set<string>>(new Set());
   const suppressMouseUpRef = useRef(false);
 
@@ -144,23 +145,13 @@ export function JobMapView({
     });
     mapRef.current = map;
 
-    // Base tile layer — OSM tiles are free and require no API key.
-    // Dark mode is achieved via CSS filter on the tile pane (see style block).
-    const tileUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-    const tileLayer = L.tileLayer(tileUrl, {
-      attribution: '&copy; OpenStreetMap contributors',
-      subdomains: 'abc',
-      maxZoom: 19,
-    }).addTo(map);
-    tileLayerRef.current = tileLayer;
+    // Use explicit panes so province artwork, labels, and job markers never overlap incorrectly.
+    map.createPane('provincePane').style.zIndex = '400';
+    map.createPane('radiusPane').style.zIndex = '450';
+    map.createPane('provinceLabelPane').style.zIndex = '500';
+    map.createPane('jobPane').style.zIndex = '600';
 
-    // Apply dark-mode filter to the tile pane
-    const tilePane = map.getPane('tilePane');
-    if (tilePane) {
-      tilePane.classList.add('tr-tile-pane');
-      if (isDark) tilePane.classList.add('tr-tile-dark');
-    }
-
+    // The province boundary data is the map surface. Omitting global tiles keeps neighboring countries hidden.
     // Add zoom control to bottom-right
     L.control.zoom({ position: 'bottomright' }).addTo(map);
 
@@ -170,6 +161,7 @@ export function JobMapView({
       .then((data) => {
         const s = themeStyles(isDark);
         const geo = L.geoJSON(data, {
+          pane: 'provincePane',
           style: () => ({ ...s.province }),
           onEachFeature: (feature, layer) => {
             const name = feature.properties?.name ?? '';
@@ -204,16 +196,43 @@ export function JobMapView({
           },
         }).addTo(map);
         geoJsonRef.current = geo;
-        // Push province fills below job markers
-        geo.eachLayer((layer) => (layer as L.Path).bringToBack());
-        // Fit the map to Turkey's bounds once loaded
-        try {
-          map.fitBounds(geo.getBounds(), { padding: [20, 20] });
-        } catch {
-          // bounds may not be ready
+        // Add persistent, high-contrast province labels inside Türkiye.
+        const labels = L.layerGroup([], { pane: 'provinceLabelPane' }).addTo(map);
+        for (const [name, coords] of Object.entries(PROVINCE_CENTROIDS)) {
+          L.marker([coords.lat, coords.lng], {
+            pane: 'provinceLabelPane',
+            interactive: false,
+            icon: L.divIcon({
+              className: 'tr-province-label',
+              html: `<span>${name}</span>`,
+              iconSize: undefined,
+            }),
+          }).addTo(labels);
         }
+        provinceLabelsRef.current = labels;
+        map.fitBounds(geo.getBounds(), { padding: [20, 20] });
+        map.setMaxBounds(geo.getBounds().pad(0.08));
       })
       .catch(() => setGeoError('Map boundaries could not be loaded. Please refresh the page.'));
+
+    // Map click → set search center and resolve the selected city, district, and neighborhood.
+    const syncSearchLocation = async (lat: number, lng: number) => {
+      const label = await reverseGeocode(lat, lng);
+      if (label) {
+        setSearchQuery(label);
+        return;
+      }
+      let nearestCity = 'Türkiye';
+      let nearestDistance = Infinity;
+      for (const [city, coords] of Object.entries(CITY_COORDS)) {
+        const distance = Math.hypot(coords.lat - lat, coords.lng - lng);
+        if (distance < nearestDistance) {
+          nearestDistance = distance;
+          nearestCity = city;
+        }
+      }
+      setSearchQuery(nearestCity);
+    };
 
     // Map click → set search center (distinguishes click from drag via move threshold)
     let mouseDownPos: { x: number; y: number } | null = null;
@@ -241,21 +260,23 @@ export function JobMapView({
       if (moved < 5) {
         onCenterChange(e.latlng.lat, e.latlng.lng);
         setPopupJob(null);
+        void syncSearchLocation(e.latlng.lat, e.latlng.lng);
       } else {
         // After a drag, set the center at the release point so the radius
         // search updates to wherever the user let go.
         onCenterChange(e.latlng.lat, e.latlng.lng);
         setPopupJob(null);
+        void syncSearchLocation(e.latlng.lat, e.latlng.lng);
       }
     });
 
     return () => {
       map.remove();
       mapRef.current = null;
-      tileLayerRef.current = null;
       geoJsonRef.current = null;
       radiusCircleRef.current = null;
       centerMarkerRef.current = null;
+      provinceLabelsRef.current = null;
       jobMarkersRef.current.clear();
       provinceLayersRef.current = [];
     };
@@ -265,15 +286,7 @@ export function JobMapView({
   // ---- Swap tile layer + restyle provinces when theme changes ----
   useEffect(() => {
     const map = mapRef.current;
-    const tile = tileLayerRef.current;
-    if (!map || !tile) return;
-
-    // Toggle dark-mode CSS filter on the tile pane (same OSM tiles for both themes)
-    const tilePane = map.getPane('tilePane');
-    if (tilePane) {
-      if (isDark) tilePane.classList.add('tr-tile-dark');
-      else tilePane.classList.remove('tr-tile-dark');
-    }
+    if (!map) return;
 
     const s = themeStyles(isDark);
     for (const layer of provinceLayersRef.current) {
@@ -320,6 +333,7 @@ export function JobMapView({
 
     if (!radiusCircleRef.current) {
       radiusCircleRef.current = L.circle([centerLat, centerLng], {
+        pane: 'radiusPane',
         radius: selectedRadius * 1000,
         ...s.radiusCircle,
       }).addTo(map);
@@ -363,6 +377,7 @@ export function JobMapView({
           radius,
           color: '#fff',
           weight: 1.2,
+          pane: 'jobPane',
           fillColor: inRange ? s.markerInRange : s.markerOutOfRange,
           fillOpacity: 1,
         }).addTo(map);
@@ -523,6 +538,17 @@ export function JobMapView({
           white-space: nowrap !important;
         }
         .tr-map-tooltip::before { display: none !important; }
+        .tr-province-label {
+          color: ${isDark ? '#fff8df' : '#102d20'} !important;
+          font-size: 10px !important;
+          font-weight: 800 !important;
+          line-height: 1.1 !important;
+          text-align: center !important;
+          text-shadow: -1px -1px 0 ${isDark ? '#102d20' : '#fff'}, 1px -1px 0 ${isDark ? '#102d20' : '#fff'}, -1px 1px 0 ${isDark ? '#102d20' : '#fff'}, 1px 1px 0 ${isDark ? '#102d20' : '#fff'} !important;
+          white-space: nowrap !important;
+          pointer-events: none !important;
+          transform: translate(-50%, -50%) !important;
+        }
         .leaflet-container { font-family: inherit !important; }
         .leaflet-control-attribution {
           background: ${isDark ? 'rgba(26,42,34,0.8)' : 'rgba(255,255,255,0.8)'} !important;
@@ -537,10 +563,6 @@ export function JobMapView({
         }
         .leaflet-bar a:hover {
           background: ${isDark ? '#2a3a32' : '#f0f0f0'} !important;
-        }
-        /* Dark-mode tile filter: invert OSM tiles to produce a dark basemap */
-        .tr-tile-pane.tr-tile-dark {
-          filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.9);
         }
       `}</style>
 
@@ -575,28 +597,29 @@ export function JobMapView({
       </div>
 
       {/* Radius selector */}
-      <div className="flex flex-wrap items-center gap-2">
-        <Navigation className="h-4 w-4 shrink-0 text-secondary" />
-        <span className="text-sm font-semibold text-foreground">{t('jobs.radius')}:</span>
-        <div className="flex flex-wrap gap-2">
-          {RADII.map((r) => (
-            <button
-              key={r}
-              onClick={() => onRadiusChange(r)}
-              className={cn(
-                'rounded-full border px-3.5 py-1.5 text-xs font-medium transition-all',
-                selectedRadius === r
-                  ? 'border-primary bg-primary text-primary-foreground'
-                  : 'border-border bg-background text-muted-foreground hover:border-primary/40'
-              )}
-            >
-              {r} km
-            </button>
-          ))}
+      <div className="rounded-xl border border-border bg-card px-4 py-3 shadow-sm">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <Navigation className="h-4 w-4 shrink-0 text-secondary" />
+            <span className="text-sm font-semibold text-foreground">{t('jobs.radius')}</span>
+          </div>
+          <span className="rounded-full bg-primary/10 px-3 py-1 text-sm font-bold text-primary">{selectedRadius} km</span>
         </div>
-        <span className="ml-auto text-xs text-muted-foreground">
-          {t('jobs.jobsCount', { count: filteredJobs.length })}
-        </span>
+        <input
+          type="range"
+          min="0"
+          max="100"
+          step="1"
+          value={selectedRadius}
+          onChange={(event) => onRadiusChange(Number(event.target.value))}
+          aria-label={`${t('jobs.radius')}: ${selectedRadius} km`}
+          className="mt-3 h-2 w-full cursor-pointer accent-primary"
+        />
+        <div className="mt-1 flex justify-between text-[11px] text-muted-foreground">
+          <span>0 km</span>
+          <span>{t('jobs.jobsCount', { count: filteredJobs.length })}</span>
+          <span>100 km</span>
+        </div>
       </div>
 
       {/* Map card */}
