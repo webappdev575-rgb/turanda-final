@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Loader2, Sprout, Mail, Lock, Search, Tractor } from 'lucide-react';
@@ -13,10 +13,19 @@ import { useI18n } from '@/components/i18n-provider';
 import { Recaptcha } from '@/components/recaptcha';
 import { GoogleSignInButton, OrDivider } from '@/components/auth/google-sign-in-button';
 import { cn } from '@/lib/utils';
+import { safeRedirectPath } from '@/lib/navigation';
 
 type LoginRole = 'candidate' | 'employer';
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}>
+      <LoginContent />
+    </Suspense>
+  );
+}
+
+function LoginContent() {
   const { signIn, profile } = useAuth();
   const { t } = useI18n();
   const router = useRouter();
@@ -47,7 +56,7 @@ export default function LoginPage() {
     if (result.error) {
       setError(result.error.includes('Invalid') || result.error.includes('credentials') ? t('auth.errorCredentials') : result.error);
     } else {
-      router.push(searchParams.get('next') || (loginRole === 'employer' ? '/employer' : '/jobs'));
+      router.push(safeRedirectPath(searchParams.get('next'), loginRole === 'employer' ? '/employer' : '/jobs'));
     }
   };
 

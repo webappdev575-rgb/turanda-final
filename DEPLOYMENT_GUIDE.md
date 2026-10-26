@@ -13,7 +13,7 @@ This application is not a static `/dist` export. The production build creates:
 
 The recommended cPanel application root contains the contents of `.next/standalone/`, plus `.next/static/` at `.next/static/` and `public/` at `public/`.
 
-The runtime uses Node.js 18 or newer and listens on the port supplied by the hosting panel. The generated server uses `HOSTNAME=0.0.0.0` and should not be exposed directly to the public internet without the host's reverse proxy.
+The runtime uses Node.js 24 and listens on the port supplied by the hosting panel. The generated server uses `HOSTNAME=0.0.0.0` and should not be exposed directly to the public internet without the host's reverse proxy.
 
 ## 2. Required environment variables
 
@@ -29,8 +29,8 @@ Copy `.env.example` into the hosting environment and provide real values through
 | `SUPABASE_DB_URL` | No | Server-only | Direct database connection string for approved server operations. Do not place it in client code. |
 | `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | If Google OAuth is enabled | Browser-safe | Google OAuth client identifier. Configure the provider in Supabase Auth. |
 | `GOOGLE_CLIENT_SECRET` | If Google OAuth is enabled | Server/provider-only | Google OAuth provider secret. Keep it in Supabase/provider settings. |
-| `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` | Recommended | Browser-safe | reCAPTCHA v3 site key. |
-| `RECAPTCHA_SECRET_KEY` | Recommended | Server-only | Server verification key used by `app/api/recaptcha-verify/route.ts`. |
+| `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` | Yes in production | Browser-safe | reCAPTCHA v3 site key, required for production forms. |
+| `RECAPTCHA_SECRET_KEY` | Yes in production | Server-only | Server verification key used by `app/api/recaptcha-verify/route.ts`. |
 | `WEATHER_API_KEY` | Optional | Server/provider-only | Weather provider credential. |
 | `TMEX_API_KEY` | Optional | Server/provider-only | Commodity source credential. |
 | `COMMODITY_API_KEY` | Optional | Server/provider-only | Custom commodity source credential. |
@@ -44,37 +44,36 @@ Copy `.env.example` into the hosting environment and provide real values through
 | `SMTP_USER` | Optional | Server-only | SMTP account name. |
 | `SMTP_PASSWORD` | Optional | Server-only | SMTP password. |
 | `SMTP_FROM` | Optional | Server-only | Approved sender address. |
-| `PHONE_VERIFICATION_PROVIDER` | Optional | Server-only | Use `mock` in development; the current phone OTP service is Supabase Auth. |
-| `TWILIO_ACCOUNT_SID` | Optional | Server-only | Future Twilio account identifier. |
-| `TWILIO_AUTH_TOKEN` | Optional | Server-only | Future Twilio secret. |
-| `TWILIO_FROM_NUMBER` | Optional | Server-only | Future Twilio sender number. |
+| `PHONE_VERIFICATION_PROVIDER` | Optional | Server-only | Phone OTP is handled by the send-phone-otp Edge Function. |
+| `TWILIO_ACCOUNT_SID` | Optional | Server-only | Twilio account identifier for SMS delivery. |
+| `TWILIO_AUTH_TOKEN` | Optional | Server-only | Twilio SMS authentication secret. |
+| `TWILIO_FROM_NUMBER` | Optional | Server-only | Twilio SMS sender number. |
 | `DEV_TEST_ACCOUNTS_ENABLED` | No | Server/build setting | Set to `false` in production. It controls the dev account page. |
 | `CRON_SECRET` | If cron is enabled | Server-only | Secret for authenticating scheduled requests. |
-| `IYZICO_API_KEY` | If payments are enabled | Edge Function-only | Payment provider key read by `process-payment`. |
-| `IYZICO_SECRET_KEY` | If payments are enabled | Edge Function-only | Payment provider secret read by `process-payment`. |
+| `STRIPE_SECRET_KEY` | If Stripe is enabled | Edge Function-only | Stripe key matching the configured payment mode. Live fulfillment is not yet implemented. |
+| `PAYMENT_MODE` | If payments are enabled | Edge Function-only | `sandbox` or `live`; mode must match the key. |
+| `APP_ENV` | Yes | Edge Function-only | Use `production` on the live project. |
+| `PHONE_OTP_DEV_MODE` | Development only | Edge Function-only | Only `true` with `APP_ENV=development` returns preview codes. |
+| `ALLOW_TEST_PAYMENTS` | Development only | Edge Function-only | Only `true` with `APP_ENV=development` and `PAYMENT_MODE=sandbox` enables simulated payments. |
 
 Supabase's standard variables are already used by the Edge Functions: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY`. Keep the server-side names available to the Edge Function environment even if the Next.js app uses the `NEXT_PUBLIC_` browser names.
 
 ## 3. Local verification before upload
 
-Use Node.js 18 or newer and install the lockfile exactly:
+Use Node.js 24 and install the lockfile exactly:
 
 ```bash
 npm ci
+npm run lint
 npm run typecheck
+npm run typecheck:edge
+npm test
 npm run build
 ```
 
-The build output is `.next`, not `dist`. For the cPanel runtime, use the standalone bundle:
+The build output is `.next`, not `dist`. The postbuild script assembles `.next/standalone/` with public files and static assets. `npm start` starts `.next/standalone/server.js`. Upload the contents of that directory to the cPanel application root.
 
-```bash
-rm -rf .next/standalone/.next/static
-mkdir -p .next/standalone/.next
-cp -R .next/static .next/standalone/.next/static
-cp -R public .next/standalone/public
-```
-
-If `public/` does not exist in a specific checkout, omit that copy command. The startup file after this step is `.next/standalone/server.js`.
+Apply `20261026060000_secure_profile_and_phone_verification.sql` and redeploy the changed Edge Functions together. Client role/verification writes are intentionally blocked; the Edge Functions and database routines now own those operations. Do not use live checkout until tokenization and trusted fulfillment are implemented.
 
 ## 4. Seed the development test accounts
 
@@ -99,7 +98,7 @@ The script requires `SUPABASE_URL` or `NEXT_PUBLIC_SUPABASE_URL`, plus `SUPABASE
 The exact labels vary by Bluehost plan, but the setup sequence is:
 
 1. Open cPanel and find **Software > Setup Node.js App** or **Node.js Application Manager**.
-2. Create a new application using Node.js 18 or newer.
+2. Create a new application using Node.js 24.
 3. Set **Application mode** to `Production`.
 4. Set **Application root** to a private directory such as `turanda-app` or the directory supplied by your host. Do not use a directory containing unrelated websites.
 5. Set **Application URL** to the HTTPS domain or subdomain that should serve Turanda.
@@ -121,7 +120,7 @@ application-root/
 The standalone server normally includes its own production `node_modules` tree. If the host requires a dependency install, upload the full project and run:
 
 ```bash
-npm ci --omit=dev
+npm ci
 npm run build
 ```
 
@@ -143,27 +142,11 @@ Before opening the login page in production:
 
 The application callback code is `app/auth/callback/page.tsx`; it sends users to `/onboarding` until their profile and phone verification are complete, otherwise it sends them to `/dashboard`.
 
-## 7. Cron jobs and scheduled tasks
+## 7. Scheduled ingestion
 
-There is currently no `/api/cron/*` route or Node.js worker in this repository. Do not configure a cron job against a route that does not exist.
+The existing Supabase pg_cron/pg_net migrations invoke `fetch-news` and `fetch-commodities` using service-role credentials stored in Supabase Vault. Verify the required Vault secrets and each scheduled job in the deployed project. Never copy service-role credentials into browser settings or a request URL.
 
-When a protected scheduler route is added, use a command like this in cPanel Cron Jobs:
-
-```bash
-curl --fail --silent --show-error --max-time 60 \
-  -H "Authorization: Bearer YOUR_CRON_SECRET" \
-  https://yourdomain.com/api/cron/fetch-news >/dev/null
-```
-
-For a local Node worker uploaded to the account, the syntax would be:
-
-```bash
-/usr/local/bin/node /home/CPANEL_USERNAME/turanda-app/jobs/fetch-news.mjs
-```
-
-Replace the placeholder domain, secret, username, path, and Node binary with values supplied by the hosting account. Do not place `CRON_SECRET` in the URL, HTML, JavaScript, or a public repository. Use separate cron secrets for staging and production.
-
-The existing data-ingestion functions are `supabase/functions/fetch-news/index.ts` and `supabase/functions/fetch-commodities/index.ts`. If cPanel calls them directly, protect the entry point with a secret-aware wrapper or a scheduler that supports authenticated Edge Function requests; they are not a substitute for an authenticated cron route by themselves.
+There is no Next.js `/api/cron/*` route. If an external scheduler invokes Edge Functions directly, send its service-role authorization header over HTTPS and use the same request bodies as the existing cron migrations. The function handlers verify the caller before ingestion. `CRON_SECRET` is reserved and is not accepted as a replacement for those credentials.
 
 ## 8. Apache reverse proxy and `.htaccess`
 
@@ -209,7 +192,7 @@ After restart, test the following user paths in order:
 5. Admin reaches `/admin/dashboard`; standard users cannot access it.
 6. `/jobs`, `/commodities`, `/haberler`, `/messages`, and `/advertise` load their empty and populated states.
 7. Google OAuth returns to `/auth/callback` and then to the correct destination.
-8. Phone OTP sends and verifies through the configured Supabase Auth provider.
+8. Phone OTP sends and verifies through the configured `send-phone-otp` Edge Function with Twilio configured.
 9. Notification and payment Edge Functions return CORS headers and reject unauthorized calls.
 10. Refreshing a nested route does not produce an Apache 404.
 

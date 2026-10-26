@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useId } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, MapPin, Briefcase, Sprout, X, Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
@@ -112,6 +112,7 @@ export function PredictiveSearch({
   autoFocus,
   inputClassName,
 }: PredictiveSearchProps) {
+  const listboxId = useId();
   const { t } = useI18n();
   const router = useRouter();
   const [query, setQuery] = useState('');
@@ -196,6 +197,8 @@ export function PredictiveSearch({
             role="combobox"
             aria-expanded={open && suggestions.length > 0}
             aria-autocomplete="list"
+            aria-controls={listboxId}
+            aria-activedescendant={open && activeIdx >= 0 ? `${listboxId}-${activeIdx}` : undefined}
           />
           {loading && (
             <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
@@ -205,6 +208,7 @@ export function PredictiveSearch({
 
       {open && suggestions.length > 0 && (
         <div
+          id={listboxId}
           role="listbox"
           className="absolute left-0 right-0 top-full z-50 mt-1 max-h-[320px] overflow-y-auto rounded-xl border border-border bg-popover shadow-xl animate-fade-in"
         >
@@ -212,6 +216,7 @@ export function PredictiveSearch({
             <button
               key={`${s.kind}-${s.label}-${i}`}
               type="button"
+              id={`${listboxId}-${i}`}
               role="option"
               aria-selected={i === activeIdx}
               onMouseDown={(e) => { e.preventDefault(); handleSelect(s); }}

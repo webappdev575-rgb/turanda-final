@@ -50,13 +50,14 @@ export default function EmployerPage() {
   }, [authLoading, user, router]);
 
   useEffect(() => {
-    const dismissed = localStorage.getItem('employer-callout-dismissed');
-    if (dismissed === 'true') setCalloutDismissed(true);
+    try {
+      if (localStorage.getItem('employer-callout-dismissed') === 'true') setCalloutDismissed(true);
+    } catch { /* Storage may be disabled. */ }
   }, []);
 
   const dismissCallout = () => {
     setCalloutDismissed(true);
-    localStorage.setItem('employer-callout-dismissed', 'true');
+    try { localStorage.setItem('employer-callout-dismissed', 'true'); } catch { /* Keep the in-memory choice. */ }
   };
 
   if (authLoading || !user) {

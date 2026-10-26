@@ -44,11 +44,11 @@ Deno.serve(async (req: Request) => {
 
     const { data: profile } = await userClient
       .from("profiles")
-      .select("is_admin")
+      .select("is_admin, is_banned")
       .eq("id", user.id)
       .maybeSingle();
 
-    if (!profile?.is_admin) {
+    if (!profile?.is_admin || profile.is_banned) {
       return new Response(JSON.stringify({ error: "Forbidden" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -58,32 +58,37 @@ Deno.serve(async (req: Request) => {
     const body = await req.json() as AdminUserActionRequest;
     const { action, userId, value } = body;
 
-    if (!action || !userId || typeof value !== "boolean") {
+    const columns = {
+      set_admin_status: "is_admin",
+      set_user_ban_status: "is_banned",
+      set_moderator_status: "is_moderator",
+      set_editor_status: "is_editor",
+    } as const;
+
+    if (!Object.hasOwn(columns, action) || typeof userId !== "string" ||
+        !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId) ||
+        typeof value !== "boolean") {
       return new Response(JSON.stringify({ error: "Missing required fields" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    if (action === "set_admin_status") {
-      rpcParams.p_is_admin = value;
-    } else if (action === "set_moderator_status") {
-      rpcParams.p_is_moderator = value;
-    } else if (action === "set_editor_status") {
-      rpcParams.p_is_editor = value;
-    } else {
-      rpcParams.p_is_banned = value;
-    }
+    // The caller was authorized above. Legacy RPCs use auth.uid(), which is
+    // unavailable when invoked with the service role.
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
-    if (action === "set_editor_status") {
-      const { error: updateErr } = await adminClient
-        .from("profiles")
-        .update({ is_editor: value })
-        .eq("id", userId);
-      if (updateErr) throw updateErr;
-    } else {
-      const { error: rpcErr } = await adminClient.rpc(action, rpcParams);
-      if (rpcErr) throw rpcErr;
+    const { data: updated, error: updateErr } = await adminClient
+      .from("profiles")
+      .update({ [columns[action]]: value, updated_at: new Date().toISOString() })
+      .eq("id", userId)
+      .select("id")
+      .maybeSingle();
+    if (updateErr) throw updateErr;
+    if (!updated) {
+      return new Response(JSON.stringify({ error: "Profile not found" }), {
+        status: 404,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     return new Response(JSON.stringify({ success: true }), {
@@ -91,7 +96,7 @@ Deno.serve(async (req: Request) => {
     });
   } catch (err) {
     return new Response(
-      JSON.stringify({ error: err.message }),
+      JSON.stringify({ error: "User action failed" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }

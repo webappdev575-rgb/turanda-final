@@ -46,6 +46,7 @@ function writeCookie(state: FavoriteState) {
  */
 export function useMarketFavorites() {
   const { session, loading: authLoading } = useAuth();
+  const userId = session?.user.id;
   const [favorites, setFavorites] = useState<FavoriteState>(EMPTY);
   const [ready, setReady] = useState(false);
 
@@ -53,7 +54,7 @@ export function useMarketFavorites() {
   useEffect(() => {
     let cancelled = false;
 
-    if (!isSupabaseConfigured || !session?.user) {
+    if (!isSupabaseConfigured || !userId) {
       setFavorites(readCookie());
       setReady(true);
       return;
@@ -64,7 +65,7 @@ export function useMarketFavorites() {
       const { data, error } = await supabase
         .from('user_market_favorites')
         .select('kind, value')
-        .eq('user_id', session.user.id);
+        .eq('user_id', userId);
 
       if (cancelled) return;
       const dbState: FavoriteState = { commodity: [], exchange: [] };
@@ -74,6 +75,12 @@ export function useMarketFavorites() {
             if (!dbState[row.kind].includes(row.value)) dbState[row.kind].push(row.value);
           }
         }
+      }
+
+      if (error) {
+        setFavorites(EMPTY);
+        setReady(true);
+        return;
       }
 
       // Merge cookie favorites into the account (guest → member), then clear the cookie.
@@ -90,13 +97,14 @@ export function useMarketFavorites() {
       });
 
       if (toInsert.length > 0) {
-        await supabase
+        const { error: mergeError } = await supabase
           .from('user_market_favorites')
-          .upsert(toInsert.map((r) => ({ ...r, user_id: session.user.id })), {
+          .upsert(toInsert.map((r) => ({ ...r, user_id: userId })), {
             onConflict: 'user_id,kind,value',
             ignoreDuplicates: true,
           });
-        writeCookie(EMPTY);
+        if (cancelled) return;
+        if (!mergeError) writeCookie(EMPTY);
       }
 
       if (!cancelled) {
@@ -108,11 +116,11 @@ export function useMarketFavorites() {
     return () => {
       cancelled = true;
     };
-  }, [session?.user?.id]);
+  }, [userId]);
 
   const toggle = useCallback(
     async (kind: FavoriteKind, value: string) => {
-      if (!session?.user || !isSupabaseConfigured) {
+      if (!userId || !isSupabaseConfigured) {
         setFavorites((prev) => {
           const has = prev[kind].includes(value);
           const next: FavoriteState = {
@@ -136,7 +144,7 @@ export function useMarketFavorites() {
         const { error } = await supabase
           .from('user_market_favorites')
           .delete()
-          .eq('user_id', session.user.id)
+          .eq('user_id', userId)
           .eq('kind', kind)
           .eq('value', value);
         if (error) {
@@ -157,7 +165,7 @@ export function useMarketFavorites() {
         }
       }
     },
-    [session?.user?.id, favorites],
+    [userId, favorites],
   );
 
   return { favorites, toggle, ready: ready && !authLoading };

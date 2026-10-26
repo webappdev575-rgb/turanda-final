@@ -161,7 +161,7 @@ function JobsPageContent() {
           return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       }
     });
-  }, [jobs, selectedTypes, search, location, selectedLanguage, locale, sortBy, geoCoords]);
+  }, [jobs, selectedTypes, search, location, selectedLanguage, sortBy, geoCoords]);
 
   const handleApplyClick = (job: Job) => { setApplyJob(job); setApplyOpen(true); };
   const handleViewClick = (job: Job) => { setDetailJob(job); setDetailOpen(true); };
@@ -215,7 +215,7 @@ function JobsPageContent() {
       list.sort((a, b) => a.distance - b.distance);
     }
     return list;
-  }, [filteredJobs, centerLat, centerLng, viewMode, sortBy]);
+  }, [filteredJobs, centerLat, centerLng, sortBy]);
 
   const jobsInRadius = useMemo(
     () => jobsWithDistance.filter(({ distance }) => distance <= selectedRadius),

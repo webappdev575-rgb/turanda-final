@@ -1,5 +1,4 @@
-// https://deno.land/std@0.168.0/http/server.ts
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "npm:@supabase/supabase-js@2.58.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -18,38 +17,34 @@ interface PaymentRequest {
 
 function generateTransactionId(): string {
   const timestamp = Date.now().toString(36);
-  const random = Math.random().toString(36).slice(2, 8);
+  const random = crypto.randomUUID();
   return `txn_${timestamp}${random}`;
 }
 
-/**
- * Payment gateway with sandbox support.
- *
- * Environment variables (set via Supabase Edge Function secrets):
- * - STRIPE_SECRET_KEY      : sk_test_... (sandbox) or sk_live_... (production)
- * - STRIPE_WEBHOOK_SECRET  : whsec_... for verifying webhook signatures
- * - IYZICO_API_KEY         : reserved for phone verification flow (stage 3)
- * - IYZICO_SECRET_KEY      : reserved for phone verification flow (stage 3)
- * - PAYMENT_MODE           : 'sandbox' | 'live' — controls which provider is
- *                            used when both are configured. Defaults to
- *                            'sandbox' so a fresh HostPapa deployment works
- *                            out of the box with Stripe test keys.
- *
- * When STRIPE_SECRET_KEY is present, a real Stripe PaymentIntent is created
- * with automatic payment methods and the card is charged in test mode using
- * the tokenized test card 4242 4242 4242 4242. When it is absent, the request
- * falls through to the built-in simulated flow so development never blocks.
+/** Stripe intents require provider confirmation before reporting paid.
+ * Simulation is available only with APP_ENV=development,
+ * PAYMENT_MODE=sandbox and ALLOW_TEST_PAYMENTS=true.
  */
-serve(async (req: Request) => {
+Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 200, headers: corsHeaders });
   }
 
   try {
+    const token = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
+    const client = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!);
+    const { data: { user }, error: authError } = await client.auth.getUser(token);
+    if (authError || !user) {
+      return new Response(JSON.stringify({ success: false, error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     const body = await req.json() as PaymentRequest;
     const { tier, amount, provider, card_name, card_last4 } = body;
 
-    if (!tier || amount === undefined) {
+    const expectedPrices: Record<string, number> = { featured: 499, pinned: 899 };
+    if (!Object.hasOwn(expectedPrices, tier) || typeof amount !== "number" || amount !== expectedPrices[tier] ||
+        !["stripe", "test"].includes(provider)) {
       return new Response(
         JSON.stringify({ success: false, error: "Missing required fields" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -58,13 +53,17 @@ serve(async (req: Request) => {
 
     const stripeSecret = Deno.env.get("STRIPE_SECRET_KEY");
     const paymentMode = Deno.env.get("PAYMENT_MODE") ?? "sandbox";
-    const iyzicoApiKey = Deno.env.get("IYZICO_API_KEY");
-    const iyzicoSecretKey = Deno.env.get("IYZICO_SECRET_KEY");
 
-    const wantsStripe = provider === "stripe" || provider === "test" || provider === "iyzico";
+    const wantsStripe = provider === "stripe";
     const stripeReady = stripeSecret && (paymentMode === "live" || paymentMode === "sandbox");
 
     if (wantsStripe && stripeReady) {
+      if ((paymentMode === "sandbox" && !stripeSecret.startsWith("sk_test_")) ||
+          (paymentMode === "live" && !stripeSecret.startsWith("sk_live_"))) {
+        return new Response(JSON.stringify({ success: false, error: "Payment mode does not match provider configuration" }), {
+          status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
       const isLive = paymentMode === "live" && stripeSecret.startsWith("sk_live_");
       const useLiveKey = isLive && paymentMode === "live";
 
@@ -104,7 +103,7 @@ serve(async (req: Request) => {
 
       return new Response(
         JSON.stringify({
-          success: true,
+          success: stripeData.status === "succeeded",
           transaction_id: stripeData.id,
           status: stripeData.status === "succeeded" ? "paid" : stripeData.status,
           provider: "stripe",
@@ -114,24 +113,13 @@ serve(async (req: Request) => {
       );
     }
 
-    // iyzico reserved for the phone-verification flow; kept separate from
-    // Stripe so the two never conflict once both merchants are onboarded.
-    if (provider === "iyzico-phone-verify" && iyzicoApiKey && iyzicoSecretKey) {
-      const transactionId = generateTransactionId();
-      return new Response(
-        JSON.stringify({
-          success: true,
-          transaction_id: transactionId,
-          status: "pending_verification",
-          provider: "iyzico",
-          mode: "phone_verification",
-        }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    // Simulated payments require explicit development configuration.
+    if (provider !== "test" || paymentMode !== "sandbox" ||
+        Deno.env.get("APP_ENV") !== "development" || Deno.env.get("ALLOW_TEST_PAYMENTS") !== "true") {
+      return new Response(JSON.stringify({ success: false, error: "Payment provider is not configured" }), {
+        status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
-
-    // Fallback: simulate a successful payment so local/dev flows never block.
-    await new Promise((resolve) => setTimeout(resolve, 800));
 
     const transactionId = generateTransactionId();
     return new Response(

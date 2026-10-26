@@ -1,4 +1,5 @@
-import { createClient } from "npm:@supabase/supabase-js@2.58.0";
+import { isAuthorizedStaff } from "../_shared/authorize.ts";
+import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2.58.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -8,11 +9,11 @@ const corsHeaders = {
 
 interface NewsArticle {
   title: string;
-  summary: string;
+  summary: string | null;
   category: string;
   region: string;
   source: string;
-  url: string;
+  url: string | null;
   published_at: string;
   agency_type?: string | null;
   sector?: string | null;
@@ -107,32 +108,6 @@ async function callAi(ai: AiConfig, system: string, user: string, timeoutMs = 12
 }
 
 // ─── Staff authorization for privileged modes ───
-
-async function isAuthorizedStaff(
-  req: Request,
-  supabase: ReturnType<typeof createClient>,
-): Promise<boolean> {
-  const token = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "").trim();
-  if (!token) return false;
-  // Scheduled cron jobs authenticate with the service-role key
-  if (token === Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")) return true;
-  try {
-    // Validate the session token with Supabase Auth (signature + expiry),
-    // then check the caller's staff flags in profiles.
-    const anon = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!);
-    const { data: userData, error } = await anon.auth.getUser(token);
-    if (error || !userData?.user?.id) return false;
-    const { data } = await supabase
-      .from("profiles")
-      .select("is_admin, is_moderator, is_editor, is_banned")
-      .eq("id", userData.user.id)
-      .maybeSingle();
-    if (!data || data.is_banned) return false;
-    return data.is_admin === true || data.is_moderator === true || data.is_editor === true;
-  } catch {
-    return false;
-  }
-}
 
 // ─── Article body extraction ───
 
@@ -275,7 +250,7 @@ async function translateArticles(articles: ArticleRow[]): Promise<Map<string, Tr
 }
 
 async function persistTranslations(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClient,
   articles: ArticleRow[],
 ): Promise<number> {
   const translations = await translateArticles(articles);
@@ -289,7 +264,7 @@ async function persistTranslations(
 
 // ─── Commodity registry cache (per invocation) ───
 
-async function loadCommodityNames(supabase: ReturnType<typeof createClient>): Promise<string[]> {
+async function loadCommodityNames(supabase: SupabaseClient): Promise<string[]> {
   const { data } = await supabase.from("commodity_registry").select("commodity_name");
   return (data ?? []).map((r: { commodity_name: string }) => r.commodity_name);
 }
@@ -297,7 +272,7 @@ async function loadCommodityNames(supabase: ReturnType<typeof createClient>): Pr
 // ─── Full rewrite pipeline for freshly ingested rows ───
 
 async function processRewrites(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClient,
   rows: ArticleRow[],
 ): Promise<{ rewritten: number; autoPublished: number; pendingReview: number; tagged: number }> {
   const ai = getAiConfig();
@@ -359,7 +334,7 @@ async function processRewrites(
 // ─── On-demand rewrite for one article (admin button) ───
 
 async function rewriteSingle(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClient,
   articleId: string,
 ): Promise<{ success: boolean; error?: string }> {
   const { data: row, error: fetchErr } = await supabase
@@ -417,7 +392,7 @@ async function rewriteSingle(
 // ─── Upsert helper ───
 
 async function upsertArticles(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClient,
   rows: NewsArticle[],
 ) {
   // Generate slugs for new rows; upsert on title, ignoring duplicates, then
@@ -473,7 +448,7 @@ const DAILY_FALLBACK_POOL: { title: string; summary: string; category: string; s
 ];
 
 async function fetchGovSource(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClient,
   src: GovSource,
 ): Promise<number> {
   try {
@@ -521,7 +496,7 @@ async function fetchGovSource(
 }
 
 async function pickDailyFallbacks(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClient,
   count: number,
 ): Promise<NewsArticle[]> {
   const dayIndex = Math.floor(Date.now() / 86400000);
@@ -547,7 +522,7 @@ async function pickDailyFallbacks(
 }
 
 async function runGovSourcesMode(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClient,
   sourceKey?: string,
   dailyMode?: boolean,
 ): Promise<{ ingested: number; sources: { key: string; fetched: number }[]; fallback: number }> {
@@ -595,7 +570,7 @@ Deno.serve(async (req: Request) => {
       articles?: NewsArticle[];
     };
 
-    if (!(await isAuthorizedStaff(req, supabase))) {
+    if (!(await isAuthorizedStaff(req, true))) {
       return new Response(
         JSON.stringify({ error: "Unauthorized: staff session or service key required" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },

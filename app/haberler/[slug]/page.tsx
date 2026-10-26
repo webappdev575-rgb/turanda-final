@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useParams } from 'next/navigation';
 import {
   ArrowLeft, Calendar, FileText, Loader2, MapPin, Newspaper, TrendingUp, Cloud,
 } from 'lucide-react';
@@ -29,7 +30,7 @@ const categoryConfig: Record<string, { icon: React.ComponentType<{ className?: s
 // Splits paragraphs and inserts the inline ad banner after roughly 1/3 and
 // 2/3 of the body — the natural mid-article break points.
 function splitBodyWithAds(paragraphs: string[]) {
-  if (paragraphs.length < 4) return [{ type: 'text' as const, text: paragraphs[0] ?? '' }];
+  if (paragraphs.length < 4) return paragraphs.map((text) => ({ type: 'text' as const, text }));
   const firstAdAfter = Math.max(1, Math.round(paragraphs.length / 3));
   const secondAdAfter = Math.max(firstAdAfter + 1, Math.round((paragraphs.length * 2) / 3));
   const out: { type: 'text' | 'ad'; text?: string; adIndex?: number }[] = [];
@@ -41,7 +42,8 @@ function splitBodyWithAds(paragraphs: string[]) {
   return out;
 }
 
-export default function NewsArticlePage({ params }: { params: { slug: string } }) {
+export default function NewsArticlePage() {
+  const params = useParams<{ slug: string }>();
   const { locale, t } = useI18n();
   const { article, loading, error } = useNewsArticle(params.slug);
 

@@ -1,5 +1,7 @@
 'use client';
 
+import Image from 'next/image';
+
 import Link from 'next/link';
 import { Suspense, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
@@ -58,7 +60,7 @@ function AkademiPageContent() {
     <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
       <div className="relative overflow-hidden rounded-[32px] ring-1 ring-[#15231d1a] shadow-[0px_25px_50px_-12px_#00000026] dark:ring-[#ffffff14]">
         <div className="relative h-[320px] w-full overflow-hidden sm:h-[380px] lg:h-[420px]">
-          <img
+          <Image width={1200} height={675}
             src="https://images.pexels.com/photos/5555232/pexels-photo-5555232.jpeg?auto=compress&cs=tinysrgb&w=1600"
             alt=""
             aria-hidden="true"
@@ -113,7 +115,7 @@ function AkademiPageContent() {
               <Card className="group h-full overflow-hidden border-border transition-all hover:shadow-lg hover:border-primary/30 animate-fade-in-up">
                 {course.thumbnail_url && (
                   <div className="relative h-40 overflow-hidden">
-                    <img src={course.thumbnail_url} alt={course.title} className="h-full w-full object-cover transition-transform group-hover:scale-105" />
+                    <Image width={1200} height={675} src={course.thumbnail_url} alt={course.title} className="h-full w-full object-cover transition-transform group-hover:scale-105" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
                   </div>
                 )}

@@ -125,7 +125,7 @@ export function FigmaSolutionsSection() {
                   <div
                     className={cn(
                       'relative h-[280px] w-full overflow-hidden rounded-3xl lg:h-80',
-                      'transition-[height] duration-[400ms] ease-in-out motion-reduce:transition-none',
+                      'transition-[height] [transition-duration:400ms] ease-in-out motion-reduce:transition-none',
                       '[@media(hover:hover)]:motion-safe:group-hover:h-[300px]',
                       '[@media(hover:hover)]:motion-safe:lg:group-hover:h-[400px]',
                       openId === card.id && 'h-[300px] lg:h-[400px]'

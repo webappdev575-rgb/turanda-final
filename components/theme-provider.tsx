@@ -29,7 +29,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     } else {
       document.documentElement.classList.remove('dark');
     }
-    localStorage.setItem('turanda-theme', t);
+    try { localStorage.setItem('turanda-theme', t); } catch { /* Keep the in-memory preference. */ }
   }, []);
 
   useEffect(() => {

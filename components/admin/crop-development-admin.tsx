@@ -1,5 +1,7 @@
 'use client';
 
+import Image from 'next/image';
+
 import { useEffect, useState } from 'react';
 import { Loader2, Save, Check, ArrowUp, ArrowDown, Plus, Trash2, Sprout } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -295,7 +297,7 @@ export function CropDevelopmentAdmin() {
               {/* Live preview */}
               {card.image_url && (
                 <div className="overflow-hidden rounded-lg border border-border">
-                  <img
+                  <Image width={1200} height={675}
                     src={card.image_url}
                     alt="Preview"
                     className={cn('h-24 w-full object-cover', !card.is_visible && 'opacity-40')}

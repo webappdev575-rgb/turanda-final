@@ -47,7 +47,7 @@ function SustainabilityImageCarousel() {
           alt=""
           fill
           sizes="(max-width: 1024px) 100vw, 420px"
-          className={`object-cover transition-opacity duration-[1500ms] ease-in-out ${i === index ? 'opacity-100' : 'opacity-0'}`}
+          className={`object-cover transition-opacity [transition-duration:1500ms] ease-in-out ${i === index ? 'opacity-100' : 'opacity-0'}`}
         />
       ))}
     </div>

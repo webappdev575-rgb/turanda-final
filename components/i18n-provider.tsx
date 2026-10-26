@@ -21,15 +21,15 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>('tr');
 
   useEffect(() => {
-    const stored = localStorage.getItem('turanda-locale') as Locale | null;
-    if (stored) {
-      setLocaleState(stored);
-    }
+    try {
+      const stored = localStorage.getItem('turanda-locale');
+      if (stored === 'tr' || stored === 'en' || stored === 'ar') setLocaleState(stored);
+    } catch { /* Storage may be disabled. Keep the default locale. */ }
   }, []);
 
   const setLocale = useCallback((l: Locale) => {
     setLocaleState(l);
-    localStorage.setItem('turanda-locale', l);
+    try { localStorage.setItem('turanda-locale', l); } catch { /* Keep the in-memory preference. */ }
   }, []);
 
   const t = useCallback(

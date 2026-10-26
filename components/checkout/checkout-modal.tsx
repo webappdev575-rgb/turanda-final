@@ -51,7 +51,7 @@ export function CheckoutModal({ open, onOpenChange, tierInfo, jobId, onSuccess }
   const [error, setError] = useState<string | null>(null);
   const [recaptchaToken, setRecaptchaToken] = useState('');
 
-  const isTestMode = !process.env.NEXT_PUBLIC_STRIPE_ENABLED;
+  const isTestMode = process.env.NEXT_PUBLIC_STRIPE_ENABLED !== 'true';
 
   const resetForm = () => {
     setCardName('');
@@ -97,13 +97,16 @@ export function CheckoutModal({ open, onOpenChange, tierInfo, jobId, onSuccess }
       if (fnError) throw fnError;
 
       const result = data as { success: boolean; transaction_id: string; status: string };
-      const transactionId = result?.transaction_id ?? `test-${Date.now()}`;
+      if (!result?.success || result.status !== 'paid' || !result.transaction_id) {
+        throw new Error('Payment has not been confirmed');
+      }
+      const transactionId = result.transaction_id;
 
       if (jobId) {
         const now = new Date();
         const featuredUntil = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
-        await supabase
+        const { error: updateError } = await supabase
           .from('jobs')
           .update({
             is_featured: true,
@@ -112,15 +115,7 @@ export function CheckoutModal({ open, onOpenChange, tierInfo, jobId, onSuccess }
             payment_status: 'paid',
           })
           .eq('id', jobId);
-
-        await supabase.from('job_payments').insert([{
-          job_id: jobId,
-          amount: tierInfo.price,
-          tier: tierInfo.tier,
-          provider: isTestMode ? 'test' : 'stripe',
-          transaction_id: transactionId,
-          status: 'paid',
-        }]);
+        if (updateError) throw updateError;
       }
 
       setProcessing(false);

@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, useRef, ReactNode } from 'react';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import type { Session, User } from '@supabase/supabase-js';
 
@@ -76,7 +76,7 @@ const AuthContext = createContext<AuthContextValue>({
   isGoogleUser: false,
   signIn: async () => ({ error: 'not implemented' }),
   signInWithGoogle: async () => ({ error: 'not implemented' }),
-  signUp: async () => ({ error: 'not implemented', needsEmailVerification: false }) as any,
+  signUp: async () => ({ error: 'not implemented', needsEmailVerification: false }),
   signOut: async () => {},
   updateProfile: async () => ({ error: 'not implemented' }),
   refreshProfile: async () => {},
@@ -89,6 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const activeUserId = useRef<string | null>(null);
 
   const isGoogleUser = !!(session?.user?.app_metadata?.provider === 'google');
 
@@ -106,21 +107,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    if (activeUserId.current !== userId) return;
     if (data) {
       setProfile(data as Profile);
     } else {
       const { data: userData } = await supabase.auth.getUser();
+      if (userData.user?.id !== userId || activeUserId.current !== userId) return;
+      const metadata = userData.user.user_metadata;
       const fullName = userData?.user?.user_metadata?.full_name
         || userData?.user?.user_metadata?.name
         || '';
       const { data: newProfile, error: insertError } = await supabase
         .from('profiles')
-        .insert({ id: userId, full_name: fullName, user_type: 'worker' })
+        .insert({
+          id: userId,
+          full_name: fullName,
+          user_type: metadata.user_type || 'worker',
+          farm_name: metadata.farm_name || null,
+          city: metadata.city || null,
+          region: metadata.region || null,
+          latitude: metadata.latitude ?? null,
+          longitude: metadata.longitude ?? null,
+          preferred_regions: metadata.preferred_regions || null,
+          preferred_jobs: metadata.preferred_jobs || null,
+          experience_level: metadata.experience_level || null,
+          primary_crops: metadata.primary_crops || null,
+          onboarded: metadata.onboarded === true,
+        })
         .select('*')
         .maybeSingle();
 
+      if (activeUserId.current !== userId) return;
       if (!insertError && newProfile) {
         setProfile(newProfile as Profile);
+      } else if (insertError?.code === '23505') {
+        // Another auth event may have created the same profile first.
+        await fetchProfile(userId);
       }
     }
   }, []);
@@ -131,48 +153,58 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      if (session?.user) {
-        (async () => {
-          await fetchProfile(session.user.id);
-          setLoading(false);
-        })();
-      } else {
-        setLoading(false);
-      }
-    });
+    let disposed = false;
+    let authEventReceived = false;
+    const timers = new Set<ReturnType<typeof setTimeout>>();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
-      setSession(newSession);
-      if (newSession?.user) {
-        (async () => {
-          await fetchProfile(newSession.user.id);
-
-          if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
-            const isEmailConfirmed = !!newSession.user.email_confirmed_at;
-            if (isEmailConfirmed) {
-              const { data: prof } = await supabase
-                .from('profiles')
-                .select('is_verified')
-                .eq('id', newSession.user.id)
-                .maybeSingle();
-              if (prof && !prof.is_verified) {
-                await supabase
-                  .from('profiles')
-                  .update({ is_verified: true, updated_at: new Date().toISOString() })
-                  .eq('id', newSession.user.id);
-                await fetchProfile(newSession.user.id);
-              }
-            }
+    const loadSession = async (nextSession: Session | null) => {
+      if (disposed) return;
+      const nextId = nextSession?.user.id ?? null;
+      if (activeUserId.current !== nextId) setProfile(null);
+      activeUserId.current = nextId;
+      setSession(nextSession);
+      try {
+        if (nextId) {
+          if (nextSession?.user.email_confirmed_at) {
+            // The database derives the verified flag from Auth; clients cannot set it.
+            await supabase.from('profiles').update({ updated_at: new Date().toISOString() }).eq('id', nextId);
           }
-        })();
-      } else {
-        setProfile(null);
+          if (!disposed && activeUserId.current === nextId) await fetchProfile(nextId);
+        }
+      } catch (error) {
+        console.error('Profile load failed:', error instanceof Error ? error.message : 'Unknown error');
+      } finally {
+        if (!disposed && activeUserId.current === nextId) setLoading(false);
       }
+    };
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!authEventReceived) void loadSession(session);
+    }).catch(() => { if (!disposed) setLoading(false); });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      authEventReceived = true;
+      // Supabase holds an auth lock during callbacks. Defer requests until it releases.
+      const nextId = newSession?.user.id ?? null;
+      if (activeUserId.current !== nextId) {
+        setProfile(null);
+        setLoading(Boolean(nextId));
+      }
+      activeUserId.current = nextId;
+      setSession(newSession);
+      const timer = setTimeout(() => {
+        timers.delete(timer);
+        if (activeUserId.current === nextId) void loadSession(newSession);
+      }, 0);
+      timers.add(timer);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      disposed = true;
+      activeUserId.current = null;
+      timers.forEach(clearTimeout);
+      subscription.unsubscribe();
+    };
   }, [fetchProfile]);
 
   const signIn = useCallback(async (email: string, password: string) => {
@@ -216,13 +248,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { full_name: fullName } },
-    });
-    if (error) return { error: error.message };
-    if (data.user) {
-      const onboarded = options?.skipOnboarding ? false : true;
-      await supabase.from('profiles').insert({
-        id: data.user.id,
+      options: { data: {
         full_name: fullName,
         user_type: options?.userType || 'worker',
         farm_name: options?.farmName || null,
@@ -230,36 +256,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         region: options?.region || null,
         latitude: options?.latitude ?? null,
         longitude: options?.longitude ?? null,
-        preferred_regions: options?.preferredRegions?.length ? options.preferredRegions : null,
-        preferred_jobs: options?.preferredJobs?.length ? options.preferredJobs : null,
+        preferred_regions: options?.preferredRegions || null,
+        preferred_jobs: options?.preferredJobs || null,
         experience_level: options?.experienceLevel || null,
-        primary_crops: options?.primaryCrops?.length ? options.primaryCrops : null,
-        onboarded,
-        is_verified: false,
-        phone_verified: false,
-      });
-    }
+        primary_crops: options?.primaryCrops || null,
+        onboarded: !options?.skipOnboarding,
+      } },
+    });
+    if (error) return { error: error.message };
     const needsVerification = data.user && !data.session ? true : false;
     return { error: null, needsEmailVerification: needsVerification };
   }, []);
 
   const signOut = useCallback(async () => {
     if (isSupabaseConfigured) await supabase.auth.signOut();
+    activeUserId.current = null;
     setProfile(null);
     setSession(null);
   }, []);
 
   const updateProfile = useCallback(async (updates: Partial<Profile>) => {
     if (!session?.user) return { error: 'Not authenticated' };
-    const { is_admin, is_moderator, is_banned, id, created_at, ...safeUpdates } = updates;
+    const { is_admin, is_moderator, is_editor, is_banned, is_verified, phone_verified, id, created_at, ...safeUpdates } = updates;
     const { error } = await supabase
       .from('profiles')
       .update({ ...safeUpdates, updated_at: new Date().toISOString() })
       .eq('id', session.user.id);
     if (error) return { error: error.message };
-    setProfile((prev) => prev ? { ...prev, ...safeUpdates } : prev);
+    await fetchProfile(session.user.id);
     return { error: null };
-  }, [session]);
+  }, [session, fetchProfile]);
 
   const refreshProfile = useCallback(async () => {
     if (session?.user) await fetchProfile(session.user.id);
@@ -268,32 +294,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const sendPhoneOtp = useCallback(async (phone: string) => {
     if (!isSupabaseConfigured) return { error: 'Phone verification is not configured yet.' };
 
-    // Accepts any phone number in international format (e.g., +90 5xx xxx xx xx).
-    // To restrict to specific area codes only, validate the prefix here before sending:
-    //   const allowed = ['+90', '+1', '+44'];
-    //   if (!allowed.some(p => phone.startsWith(p))) return { error: 'Unsupported area code' };
-    const { error } = await supabase.auth.signInWithOtp({ phone });
-    return { error: error?.message || null };
+    const { data, error } = await supabase.functions.invoke('send-phone-otp', {
+      body: { action: 'send', phone },
+    });
+    return { error: error?.message || data?.error || null };
   }, []);
 
   const verifyPhoneOtp = useCallback(async (phone: string, token: string) => {
-    if (!isSupabaseConfigured) return { error: 'Phone verification is not configured yet.' };
-
-    const { error } = await supabase.auth.verifyOtp({ phone, token, type: 'sms' });
-    if (error) return { error: error.message };
-    const userId = session?.user?.id;
-    if (userId) {
-      await supabase
-        .from('profiles')
-        .update({
-          phone,
-          phone_verified: true,
-          is_verified: true,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', userId);
-      await fetchProfile(userId);
-    }
+    if (!session?.user) return { error: 'Not authenticated' };
+    const { data, error } = await supabase.functions.invoke('send-phone-otp', {
+      body: { action: 'verify', phone, code: token },
+    });
+    if (error || !data?.verified) return { error: error?.message || data?.error || 'Verification failed' };
+    await fetchProfile(session.user.id);
     return { error: null };
   }, [session, fetchProfile]);
 

@@ -17,7 +17,7 @@ A full-featured agricultural job marketplace for Turkey with multi-language supp
 
 ## Tech Stack
 
-- **Frontend**: Next.js 13, React 18, TypeScript, Tailwind CSS, shadcn/ui
+- **Frontend**: Next.js 15, React 18, TypeScript, Tailwind CSS, shadcn/ui
 - **Charts**: Recharts
 - **Backend**: Supabase (PostgreSQL, Auth, RLS, Edge Functions)
 - **Weather API**: Open-Meteo (free, no API key required)
@@ -27,20 +27,20 @@ A full-featured agricultural job marketplace for Turkey with multi-language supp
 
 ### Prerequisites
 
-- Node.js 18+ and npm
+- Node.js 24 (see `.nvmrc`) and npm
 - A Supabase project 
 
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/your-username/turanda-tarim.git
-cd turanda-tarim
+git clone https://github.com/webappdev575-rgb/turanda-final.git
+cd turanda-final
 ```
 
 ### 2. Install dependencies
 
 ```bash
-npm install
+npm ci
 ```
 
 ### 3. Configure environment variables
@@ -67,7 +67,7 @@ The Supabase URL and anon key are found in your Supabase dashboard under Setting
 npm run dev
 ```
 
-Open http://localhost:3000 in your browser.
+Open http://localhost:3000 in your browser. Supabase is required for live data and authenticated flows. A missing reCAPTCHA key is supported only in development; production requires both reCAPTCHA keys.
 
 ### 5. Build for production
 
@@ -75,6 +75,21 @@ Open http://localhost:3000 in your browser.
 npm run build
 npm start
 ```
+
+The postbuild script copies static assets and public files into the standalone bundle. `npm start` runs that bundle. Set public environment variables before building: Next.js embeds `NEXT_PUBLIC_*` values in browser assets.
+
+## Verification
+
+```bash
+npm run lint
+npm run typecheck
+npm run typecheck:edge
+npm test
+npm run build
+npm audit
+```
+
+Edge Function checks use the pinned Deno development dependency. Regression tests use synthetic provider adapters, jsdom, and a local PostgreSQL engine (PGlite); they never write to a remote Supabase project. Apply the new migrations and redeploy the changed Edge Functions together before testing against Supabase.
 
 ## Running with Docker
 
@@ -116,7 +131,7 @@ The project includes `netlify.toml` with the Next.js plugin pre-configured:
 |----------|----------|-------------|
 | `NEXT_PUBLIC_SUPABASE_URL` | Yes | Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Supabase anon/public key |
-| `SUPABASE_SERVICE_ROLE_KEY` | Yes | Supabase service role key (server-side only) |
+| `SUPABASE_SERVICE_ROLE_KEY` | For Edge Functions / seeding | Supabase service role key (server-side only) |
 | `AI_IMAGE_API_KEY` | No | OpenAI API key for AI thumbnail generation |
 | `AI_IMAGE_PROVIDER` | No | `openai` or `custom` (default: openai) |
 | `AI_IMAGE_ENDPOINT` | No | Custom image generation endpoint (if provider is custom) |
@@ -185,6 +200,14 @@ The ad system supports:
 ├── netlify.toml
 └── tailwind.config.ts
 ```
+
+## Security and provider configuration
+
+- Privileged ingestion, thumbnails, and notification delivery verify an admin or approved editorial session, or the service role used by scheduled jobs.
+- Set `APP_ENV=production` in Edge Function secrets. SMS delivery requires all three `TWILIO_*` values. Only `APP_ENV=development` together with `PHONE_OTP_DEV_MODE=true` returns a preview code.
+- Payment simulation requires `APP_ENV=development`, `PAYMENT_MODE=sandbox`, and `ALLOW_TEST_PAYMENTS=true`. An unconfirmed Stripe intent never upgrades a job. Live payment completion still requires tokenization and trusted payment fulfillment; see the architecture gaps.
+- Profile role and verification fields cannot be set directly by the browser. Phone verification consumes the code and updates the profile in one database transaction.
+- Existing job/application policies still provide shared employer access. See `ARCHITECTURE.md` for the unresolved ownership and notification workflows.
 
 ## License
 

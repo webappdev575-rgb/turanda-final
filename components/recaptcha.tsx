@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ShieldCheck, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -16,19 +16,24 @@ declare global {
 const RECAPTCHA_SITE_KEY = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || '';
 const SCRIPT_SRC = `https://www.google.com/recaptcha/api.js?render=${RECAPTCHA_SITE_KEY}`;
 
-let scriptLoaded = false;
-let scriptLoading = false;
+let scriptPromise: Promise<void> | null = null;
 
-function loadRecaptchaScript() {
-  if (scriptLoaded || scriptLoading) return;
-  scriptLoading = true;
-  const script = document.createElement('script');
-  script.src = SCRIPT_SRC;
-  script.async = true;
-  script.defer = true;
-  script.onload = () => { scriptLoaded = true; scriptLoading = false; };
-  script.onerror = () => { scriptLoading = false; };
-  document.head.appendChild(script);
+function loadRecaptchaScript(): Promise<void> {
+  if (window.grecaptcha) return new Promise((resolve) => window.grecaptcha!.ready(resolve));
+  if (scriptPromise) return scriptPromise;
+  scriptPromise = new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = SCRIPT_SRC;
+    script.async = true;
+    script.defer = true;
+    script.onload = () => {
+      if (window.grecaptcha) window.grecaptcha.ready(resolve);
+      else reject(new Error('reCAPTCHA unavailable'));
+    };
+    script.onerror = () => { script.remove(); scriptPromise = null; reject(new Error('reCAPTCHA unavailable')); };
+    document.head.appendChild(script);
+  });
+  return scriptPromise;
 }
 
 interface RecaptchaProps {
@@ -40,52 +45,53 @@ interface RecaptchaProps {
 
 export function Recaptcha({ onVerify, action, className, disabled }: RecaptchaProps) {
   const [status, setStatus] = useState<'idle' | 'loading' | 'verified' | 'error'>('idle');
-  const tokenRef = useRef<string>('');
-  const executedRef = useRef(false);
-
-  const runExecute = useCallback(async () => {
-    if (executedRef.current) return;
-    executedRef.current = true;
-    setStatus('loading');
-    try {
-      if (!window.grecaptcha) { setStatus('error'); return; }
-      const token = await window.grecaptcha.execute(RECAPTCHA_SITE_KEY, { action });
-      tokenRef.current = token;
-      onVerify(token);
-      setStatus('verified');
-    } catch {
-      executedRef.current = false;
-      setStatus('error');
-    }
-  }, [action, onVerify]);
-
-  const executeToken = useCallback(async () => {
-    if (executedRef.current || disabled) return;
-    if (!RECAPTCHA_SITE_KEY) {
-      onVerify('no-key-dev-mode');
-      setStatus('verified');
-      return;
-    }
-
-    if (!window.grecaptcha) {
-      const waitInterval = setInterval(() => {
-        if (window.grecaptcha && scriptLoaded) {
-          clearInterval(waitInterval);
-          runExecute();
-        }
-      }, 200);
-      setTimeout(() => clearInterval(waitInterval), 10000);
-      return;
-    }
-
-    runExecute();
-  }, [action, disabled, onVerify, runExecute]);
+  const onVerifyRef = useRef(onVerify);
+  useEffect(() => { onVerifyRef.current = onVerify; }, [onVerify]);
 
   useEffect(() => {
-    loadRecaptchaScript();
-    const timer = setTimeout(() => executeToken(), 500);
-    return () => clearTimeout(timer);
-  }, [executeToken]);
+    let cancelled = false;
+    let refreshTimer: ReturnType<typeof setTimeout>;
+    const controller = new AbortController();
+    const verify = async () => {
+      if (cancelled) return;
+      onVerifyRef.current('');
+      if (disabled) { setStatus('idle'); return; }
+      if (!RECAPTCHA_SITE_KEY) {
+        if (process.env.NODE_ENV !== 'production') {
+          onVerifyRef.current('no-key-dev-mode');
+          setStatus('verified');
+        } else setStatus('error');
+        return;
+      }
+      setStatus('loading');
+      try {
+        await loadRecaptchaScript();
+        if (cancelled) return;
+        const token = await window.grecaptcha!.execute(RECAPTCHA_SITE_KEY, { action });
+        const response = await fetch('/api/recaptcha-verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token, action }),
+          signal: controller.signal,
+        });
+        const result = await response.json();
+        if (!response.ok || !result.success) throw new Error('Verification failed');
+        if (cancelled) return;
+        onVerifyRef.current(token);
+        setStatus('verified');
+        // v3 tokens expire after two minutes. Refresh while long forms stay open.
+        refreshTimer = setTimeout(verify, 90000);
+      } catch {
+        if (!cancelled) setStatus('error');
+      }
+    };
+    void verify();
+    return () => {
+      cancelled = true;
+      controller.abort();
+      clearTimeout(refreshTimer);
+    };
+  }, [action, disabled]);
 
   return (
     <div className={cn(

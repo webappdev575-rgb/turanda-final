@@ -13,7 +13,8 @@ export function useFieldsWithLatestTemp(userId: string | undefined) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!userId) { setLoading(false); return; }
+    if (!userId) { setFields([]); setLoading(false); return; }
+    setLoading(true);
     let cancelled = false;
     (async () => {
       const { data: fieldsData } = await supabase

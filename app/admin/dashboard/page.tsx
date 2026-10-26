@@ -1,5 +1,7 @@
 'use client';
 
+import Image from 'next/image';
+
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
@@ -212,7 +214,7 @@ function HeroTab() {
           className="h-24 rounded-lg"
           style={bgType === 'gradient' ? { background: `linear-gradient(to right, ${bgValue.replace('from-', '').replace('to-', '').split(' ')[0] || '#1a5c3e'}, ${bgValue.split(' ').pop() || '#2d7a52'})` } : undefined}
         >
-          {bgType === 'image' && <img src={bgValue} alt="" className="h-full w-full rounded-lg object-cover" />}
+          {bgType === 'image' && <Image width={1200} height={675} src={bgValue} alt="" className="h-full w-full rounded-lg object-cover" />}
           {bgType === 'color' && <div className="h-full w-full rounded-lg" style={{ background: bgValue }} />}
         </div>
       </div>

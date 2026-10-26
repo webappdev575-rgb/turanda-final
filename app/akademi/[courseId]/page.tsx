@@ -1,5 +1,7 @@
 'use client';
 
+import Image from 'next/image';
+
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Clock, User, PlayCircle, FileText, Loader2, BookOpen, CheckCircle2, GraduationCap } from 'lucide-react';
@@ -54,7 +56,7 @@ export default function CourseDetailPage() {
 
       {course.thumbnail_url && (
         <div className="mb-6 overflow-hidden rounded-2xl">
-          <img src={course.thumbnail_url} alt={course.title} className="h-56 w-full object-cover sm:h-72" />
+          <Image width={1200} height={675} src={course.thumbnail_url} alt={course.title} className="h-56 w-full object-cover sm:h-72" />
         </div>
       )}
 

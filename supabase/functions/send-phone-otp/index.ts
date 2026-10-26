@@ -1,4 +1,4 @@
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2.58.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -7,9 +7,6 @@ const corsHeaders = {
 };
 
 const CODE_TTL_MINUTES = 10;
-const MAX_ATTEMPTS = 5;
-const RESEND_COOLDOWN_SECONDS = 60;
-const MAX_SENDS_PER_HOUR = 5;
 
 function normalizePhone(raw: string): string | null {
   const trimmed = raw.replace(/[\s\-().]/g, "");
@@ -48,8 +45,10 @@ async function sendSms(phone: string, code: string): Promise<{ delivered: boolea
 
   // Dev mode: no SMS provider configured. Surface the code so the flow is testable
   // end-to-end; it is hashed in the database and expires in 10 minutes.
-  console.log(`[send-phone-otp] DEV MODE code for ${phone}: ${code}`);
-  return { delivered: false, devCode: code };
+  if (Deno.env.get("APP_ENV") === "development" && Deno.env.get("PHONE_OTP_DEV_MODE") === "true") {
+    return { delivered: false, devCode: code };
+  }
+  throw new Error("SMS provider is not configured");
 }
 
 Deno.serve(async (req: Request) => {
@@ -98,34 +97,18 @@ Deno.serve(async (req: Request) => {
 
     // --- SEND ---
     if (body.action === "send") {
-      const since = new Date(Date.now() - RESEND_COOLDOWN_SECONDS * 1000).toISOString();
-      const { data: recent } = await serviceClient
-        .from("phone_verification_codes")
-        .select("id, created_at")
-        .eq("phone", phone)
-        .gte("created_at", since)
-        .limit(1);
-      if (recent && recent.length > 0) {
-        return new Response(JSON.stringify({ error: "cooldown" }), {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+      const smsConfigured = ["TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_FROM_NUMBER"]
+        .every((key) => Boolean(Deno.env.get(key)));
+      const devMode = Deno.env.get("APP_ENV") === "development" && Deno.env.get("PHONE_OTP_DEV_MODE") === "true";
+      if (!smsConfigured && !devMode) {
+        return new Response(JSON.stringify({ error: "sms_not_configured" }), {
+          status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-
-      const hourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-      const { count } = await serviceClient
-        .from("phone_verification_codes")
-        .select("id", { count: "exact", head: true })
-        .eq("phone", phone)
-        .gte("created_at", hourAgo);
-      if ((count ?? 0) >= MAX_SENDS_PER_HOUR) {
-        return new Response(JSON.stringify({ error: "rate_limited" }), {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      const code = String(Math.floor(100000 + Math.random() * 900000));
+      // Rejection sampling avoids bias when reducing to a six-digit code.
+      const random = new Uint32Array(1);
+      do { crypto.getRandomValues(random); } while (random[0] >= 4294800000);
+      const code = String(100000 + random[0] % 900000);
       const codeHash = await sha256(code);
       const expiresAt = new Date(Date.now() + CODE_TTL_MINUTES * 60 * 1000).toISOString();
 
@@ -136,13 +119,19 @@ Deno.serve(async (req: Request) => {
         p_expires_at: expiresAt,
       });
       if (insertErr) {
-        return new Response(JSON.stringify({ error: "storage_failed" }), {
-          status: 500,
+        const rateError = ["cooldown", "rate_limited"].find((message) => insertErr.message === message);
+        return new Response(JSON.stringify({ error: rateError ?? "storage_failed" }), {
+          status: rateError ? 429 : 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
       const delivery = await sendSms(phone, code);
+      if (!delivery.delivered && !delivery.devCode) {
+        return new Response(JSON.stringify({ error: "delivery_failed" }), {
+          status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
       return new Response(
         JSON.stringify({
           sent: true,
@@ -170,65 +159,19 @@ Deno.serve(async (req: Request) => {
         });
       }
 
-      const { data: rows } = await serviceClient
-        .from("phone_verification_codes")
-        .select("id, code_hash, expires_at, consumed_at, attempts")
-        .eq("phone", phone)
-        .order("created_at", { ascending: false })
-        .limit(1);
-
-      const row = rows?.[0];
-      if (!row) {
-        return new Response(JSON.stringify({ error: "no_code" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (row.consumed_at) {
-        return new Response(JSON.stringify({ error: "already_used" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (new Date(row.expires_at) < new Date()) {
-        return new Response(JSON.stringify({ error: "expired" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (row.attempts >= MAX_ATTEMPTS) {
-        return new Response(JSON.stringify({ error: "too_many_attempts" }), {
-          status: 429,
+      const { data: result, error: verificationError } = await serviceClient.rpc("verify_phone_verification_code", {
+        p_user_id: userId,
+        p_phone: phone,
+        p_code_hash: await sha256(code),
+      });
+      if (verificationError) throw verificationError;
+      if (!result?.verified) {
+        return new Response(JSON.stringify(result ?? { error: "verification_failed" }), {
+          status: result?.error === "too_many_attempts" ? 429 : 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
-      const codeHash = await sha256(code);
-      if (codeHash !== row.code_hash) {
-        await serviceClient
-          .from("phone_verification_codes")
-          .update({ attempts: row.attempts + 1 })
-          .eq("id", row.id);
-        return new Response(JSON.stringify({ error: "wrong_code", attempts_left: Math.max(0, MAX_ATTEMPTS - row.attempts - 1) }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      // Success: consume the code and flip profiles.phone_verified atomically.
-      const { error: consumeErr } = await serviceClient
-        .from("phone_verification_codes")
-        .update({ consumed_at: new Date().toISOString() })
-        .eq("id", row.id)
-        .is("consumed_at", null);
-      if (consumeErr) {
-        return new Response(JSON.stringify({ error: "consume_failed" }), {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      await serviceClient.rpc("mark_phone_verified", { p_user_id: userId, p_phone: phone });
       return new Response(JSON.stringify({ verified: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -239,7 +182,7 @@ Deno.serve(async (req: Request) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message ?? "server_error" }), {
+    return new Response(JSON.stringify({ error: "server_error" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

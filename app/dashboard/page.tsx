@@ -528,14 +528,14 @@ export default function DashboardPage() {
           ) : enrollments.length === 0 ? (
             <div className="py-6 text-center">
               <p className="text-sm text-muted-foreground">{t('akademi.noEnrollments')}</p>
-              <a href="/akademi" className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-primary hover:gap-2 transition-all">
+              <Link href="/akademi" className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-primary hover:gap-2 transition-all">
                 {t('akademi.allCourses')}<ArrowRight className="h-4 w-4" />
-              </a>
+              </Link>
             </div>
           ) : (
             <div className="space-y-2">
               {enrollments.slice(0, 4).map((enr) => (
-                <a key={enr.id} href={`/akademi/${enr.course_id}`} className="block rounded-lg border border-border p-3 transition-all hover:border-primary/30 hover:shadow-sm">
+                <Link key={enr.id} href={`/akademi/${enr.course_id}`} className="block rounded-lg border border-border p-3 transition-all hover:border-primary/30 hover:shadow-sm">
                   <p className="text-sm font-medium text-foreground line-clamp-1">{enr.course?.title}</p>
                   <div className="mt-1.5 flex items-center gap-2">
                     <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
@@ -543,7 +543,7 @@ export default function DashboardPage() {
                     </div>
                     <span className="text-[10px] font-medium text-muted-foreground">{enr.progress}%</span>
                   </div>
-                </a>
+                </Link>
               ))}
             </div>
           )}

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { icons as LucideIcons, Wheat } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { sanitizeSvg } from '@/lib/svg-sanitizer';
 
 export interface IconInfo {
   icon_type: 'lucide' | 'custom';
@@ -28,11 +29,15 @@ export function IconRenderer({ icon, className = 'h-5 w-5', fallback = 'Wheat' }
       return;
     }
     let cancelled = false;
+    setSvgContent(null);
     (async () => {
-      const { data } = await supabase.storage.from('icons').download(path);
-      if (data && !cancelled) {
+      try {
+        const { data } = await supabase.storage.from('icons').download(path);
+        if (!data) return;
         const text = await data.text();
-        setSvgContent(text);
+        if (!cancelled) setSvgContent(sanitizeSvg(text));
+      } catch {
+        // Keep the fallback icon when storage is unavailable.
       }
     })();
     return () => { cancelled = true; };

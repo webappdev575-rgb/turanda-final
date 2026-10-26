@@ -1,4 +1,5 @@
-import { createClient } from "npm:@supabase/supabase-js@2.58.0";
+import { isAuthorizedStaff } from "../_shared/authorize.ts";
+import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2.58.0";
 
 
 // Edge function: generates AI thumbnails for news articles
@@ -24,7 +25,7 @@ const fallbacks = [
 ];
 
 async function generateForArticle(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClient,
   article: { id: string; title: string; summary: string | null; category: string },
 ): Promise<string> {
   const categoryContext = article.category ? `Category: ${article.category}. ` : "";
@@ -40,7 +41,7 @@ async function generateForArticle(
       const resp = await fetch("https://api.openai.com/v1/images/generations", {
         method: "POST",
         headers: { "Authorization": `Bearer ${aiKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ model: "dall-e-3", prompt: prompt.slice(0, 1000), size: "1024x576", quality: "standard", n: 1 }),
+        body: JSON.stringify({ model: "dall-e-3", prompt: prompt.slice(0, 1000), size: "1792x1024", quality: "standard", n: 1 }),
       });
       if (resp.ok) {
         const data = await resp.json();
@@ -78,6 +79,17 @@ async function generateForArticle(
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 200, headers: corsHeaders });
+  }
+
+  if (req.method !== "POST") {
+    return new Response(JSON.stringify({ error: "Method not allowed" }), {
+      status: 405, headers: { ...corsHeaders, "Content-Type": "application/json", Allow: "POST, OPTIONS" },
+    });
+  }
+  if (!(await isAuthorizedStaff(req, true))) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   try {
@@ -134,7 +146,7 @@ Deno.serve(async (req: Request) => {
     );
   } catch (err) {
     return new Response(
-      JSON.stringify({ error: err.message }),
+      JSON.stringify({ error: err instanceof Error ? err.message : "Thumbnail generation failed" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }

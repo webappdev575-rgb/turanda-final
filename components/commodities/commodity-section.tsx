@@ -1,5 +1,7 @@
 'use client';
 
+import Image from 'next/image';
+
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import Link from 'next/link';
 import {
@@ -361,9 +363,9 @@ export function CommoditySection({ popularOnly = false, showViewMore = false, ma
 
   // Determine available chart types based on exchange selection and data
   const isAllExchanges = selectedExchange === 'all';
-  const availableChartTypes: ChartType[] = isAllExchanges
+  const availableChartTypes = useMemo<ChartType[]>(() => isAllExchanges
     ? ['area', 'line', 'rangeband']
-    : ['area', 'line', 'rangebar'];
+    : ['area', 'line', 'rangebar'], [isAllExchanges]);
 
   // Auto-fallback chart type if current is not available
   useEffect(() => {
@@ -816,7 +818,7 @@ export function CommoditySection({ popularOnly = false, showViewMore = false, ma
               <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary/40 via-secondary/30 to-transparent" />
               <div className="flex items-start gap-2">
                 {ex.thumbnail_url ? (
-                  <img src={ex.thumbnail_url} alt={ex.name} className="h-9 w-9 shrink-0 rounded-lg border border-border object-cover" />
+                  <Image width={36} height={36} src={ex.thumbnail_url} alt={ex.name} className="h-9 w-9 shrink-0 rounded-lg border border-border object-cover" />
                 ) : (
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/5">
                     <span className="text-xs font-bold text-primary">{(ex.short_name || ex.name).charAt(0)}</span>

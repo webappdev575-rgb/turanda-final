@@ -1,4 +1,5 @@
-import { createClient } from "npm:@supabase/supabase-js@2.58.0";
+import { isAuthorizedStaff } from "../_shared/authorize.ts";
+import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2.58.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -102,7 +103,7 @@ function sleep(ms: number): Promise<void> {
 }
 
 async function writeLog(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClient,
   sourceId: string,
   status: string,
   recordsIngested: number,
@@ -118,7 +119,7 @@ async function writeLog(
 
 async function fetchJsonApiSource(
   source: CommoditySource,
-  _supabase: ReturnType<typeof createClient>,
+  _supabase: SupabaseClient,
 ): Promise<{ prices: CommodityPriceInput[]; error: string | null }> {
   if (!source.exchange_id) return { prices: [], error: "No target exchange configured" };
   if (!source.url) return { prices: [], error: "No URL configured" };
@@ -169,7 +170,7 @@ async function fetchJsonApiSource(
 
 async function fetchRssXmlSource(
   source: CommoditySource,
-  _supabase: ReturnType<typeof createClient>,
+  _supabase: SupabaseClient,
 ): Promise<{ prices: CommodityPriceInput[]; error: string | null }> {
   if (!source.exchange_id) return { prices: [], error: "No target exchange configured" };
   if (!source.url) return { prices: [], error: "No URL configured" };
@@ -307,7 +308,7 @@ function formatDateForTobb(date: Date): string {
 
 async function fetchTobbHtmlSource(
   source: CommoditySource,
-  _supabase: ReturnType<typeof createClient>,
+  _supabase: SupabaseClient,
 ): Promise<{ prices: CommodityPriceInput[]; error: string | null }> {
   if (!source.exchange_id) return { prices: [], error: "No target exchange configured" };
   if (!source.url) return { prices: [], error: "No URL configured" };
@@ -422,7 +423,7 @@ async function fetchTobbHtmlSource(
 }
 
 async function ingestPrices(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClient,
   prices: CommodityPriceInput[],
 ): Promise<number> {
   if (prices.length === 0) return 0;
@@ -437,7 +438,7 @@ async function ingestPrices(
 }
 
 async function updateExchangeLatestDate(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClient,
   exchangeId: string,
   prices: CommodityPriceInput[],
 ) {
@@ -454,7 +455,7 @@ async function updateExchangeLatestDate(
 
 async function fetchSingleSource(
   source: CommoditySource,
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClient,
 ): Promise<{ ingested: number; error: string | null }> {
   let result: { prices: CommodityPriceInput[]; error: string | null };
 
@@ -490,6 +491,17 @@ async function fetchSingleSource(
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 200, headers: corsHeaders });
+  }
+
+  if (req.method !== "POST") {
+    return new Response(JSON.stringify({ error: "Method not allowed" }), {
+      status: 405, headers: { ...corsHeaders, "Content-Type": "application/json", Allow: "POST, OPTIONS" },
+    });
+  }
+  if (!(await isAuthorizedStaff(req, false))) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   try {

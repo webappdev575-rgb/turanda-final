@@ -1,5 +1,7 @@
 'use client';
 
+import Image from 'next/image';
+
 import { useEffect, useMemo, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { TrendingUp, TrendingDown, Star, Search } from 'lucide-react';
@@ -1027,7 +1029,7 @@ function MarketPanel() {
               >
                 <div className="flex items-start gap-2">
                   {ex.thumbnail_url ? (
-                    <img src={ex.thumbnail_url} alt="" className="h-9 w-9 shrink-0 rounded-lg border object-cover" style={{ borderColor: pal.divider }} />
+                    <Image width={36} height={36} src={ex.thumbnail_url} alt="" className="h-9 w-9 shrink-0 rounded-lg border object-cover" style={{ borderColor: pal.divider }} />
                   ) : (
                     <div
                       className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-xs font-bold"

@@ -98,7 +98,7 @@ export function FigmaGettingStartedSection() {
                   onMouseEnter={() => setHoveredNumber(item.number)}
                   onMouseLeave={() => setHoveredNumber((current) => (current === item.number ? null : current))}
                   className={cn(
-                    'group relative cursor-pointer overflow-hidden rounded-xl border-0 bg-[#08271d] shadow-none transition-all duration-[400ms] ease-in-out dark:border dark:border-[#ffffff14]',
+                    'group relative cursor-pointer overflow-hidden rounded-xl border-0 bg-[#08271d] shadow-none transition-all [transition-duration:400ms] ease-in-out dark:border dark:border-[#ffffff14]',
                     lifted &&
                       'motion-safe:-translate-y-1.5 motion-safe:scale-[1.04] motion-safe:border-white/30 motion-safe:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.45),0_0_0_1px_rgba(255,255,255,0.15),0_0_24px_rgba(255,255,255,0.12)]'
                   )}
@@ -106,7 +106,7 @@ export function FigmaGettingStartedSection() {
                   <CardContent className="relative aspect-[3/4] h-full p-0">
                     <Image
                       className={cn(
-                        'absolute inset-0 h-full w-full object-cover transition-transform duration-[400ms] ease-in-out',
+                        'absolute inset-0 h-full w-full object-cover transition-transform [transition-duration:400ms] ease-in-out',
                         lifted && 'motion-safe:scale-[1.04]'
                       )}
                       src={item.image}
@@ -123,7 +123,7 @@ export function FigmaGettingStartedSection() {
                       </h3>
                       <div
                         className={cn(
-                          'max-h-0 translate-y-3 overflow-hidden opacity-0 transition-all duration-[400ms] ease-in-out',
+                          'max-h-0 translate-y-3 overflow-hidden opacity-0 transition-all [transition-duration:400ms] ease-in-out',
                           '[@media(hover:hover)]:group-hover:max-h-[8.5rem] [@media(hover:hover)]:group-hover:translate-y-0 [@media(hover:hover)]:group-hover:opacity-100',
                           openNumber === item.number &&
                             'max-h-[8.5rem] translate-y-0 opacity-100',

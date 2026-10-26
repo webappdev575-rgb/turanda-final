@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -23,6 +23,7 @@ import { TermsModal } from '@/components/terms-modal';
 import { TURKEY_CITIES, CITY_COORDS, JOB_TYPES } from '@/lib/constants';
 import { appConfig } from '@/lib/app-config';
 import { cn } from '@/lib/utils';
+import { safeRedirectPath } from '@/lib/navigation';
 
 type Role = 'worker' | 'employer';
 type ExperienceLevel = 'beginner' | 'intermediate' | 'experienced';
@@ -33,6 +34,14 @@ const TURKISH_REGIONS = [
 ];
 
 export default function SignupPage() {
+  return (
+    <Suspense fallback={<div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}>
+      <SignupContent />
+    </Suspense>
+  );
+}
+
+function SignupContent() {
   const { signUp } = useAuth();
   const { t } = useI18n();
   const router = useRouter();
@@ -123,7 +132,7 @@ export default function SignupPage() {
     } else if (result.needsEmailVerification) {
       setShowVerification(true);
     } else {
-      router.push(searchParams.get('next') || (skipped ? '/dashboard' : role === 'employer' ? '/employer' : '/jobs'));
+      router.push(safeRedirectPath(searchParams.get('next'), skipped ? '/dashboard' : role === 'employer' ? '/employer' : '/jobs'));
     }
   };
 

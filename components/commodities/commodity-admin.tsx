@@ -1,5 +1,7 @@
 'use client';
 
+import Image from 'next/image';
+
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Loader2, Save, Check, Plus, Trash2, Building2, Database,
@@ -229,7 +231,7 @@ function ExchangesTab() {
       <Label className="text-xs">Exchange Thumbnail (crest/logo)</Label>
       <div className="flex items-center gap-3">
         {value ? (
-          <img src={value} alt="thumbnail" className="h-12 w-12 rounded-lg border border-border object-cover" />
+          <Image width={48} height={48} src={value} alt="thumbnail" className="h-12 w-12 rounded-lg border border-border object-cover" />
         ) : (
           <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-border bg-muted/30">
             <Building2 className="h-5 w-5 text-muted-foreground" />
@@ -349,7 +351,7 @@ function ExchangesTab() {
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 flex-1 flex items-start gap-3">
                       {ex.thumbnail_url ? (
-                        <img src={ex.thumbnail_url} alt={ex.name} className="h-12 w-12 shrink-0 rounded-lg border border-border object-cover" />
+                        <Image width={48} height={48} src={ex.thumbnail_url} alt={ex.name} className="h-12 w-12 shrink-0 rounded-lg border border-border object-cover" />
                       ) : (
                         <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-border bg-primary/10">
                           <span className="text-sm font-bold text-primary">{(ex.short_name || ex.name).charAt(0)}</span>

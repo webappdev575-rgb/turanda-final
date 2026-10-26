@@ -58,28 +58,36 @@ export function useWeather(lat?: number, lng?: number) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!lat || !lng) return;
+    if (lat == null || lng == null || !Number.isFinite(lat) || !Number.isFinite(lng)) {
+      setWeather(null);
+      setError(null);
+      setLoading(false);
+      return;
+    }
+    const controller = new AbortController();
+    const { signal } = controller;
 
     const fetchWeather = async () => {
       setLoading(true);
       setError(null);
       try {
         const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,wind_speed_10m,weather_code,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=auto&forecast_days=5`;
-        const res = await fetch(url);
+        const res = await fetch(url, { signal });
         if (!res.ok) throw new Error('Weather fetch failed');
         const data = await res.json();
 
         let locationName = `${lat.toFixed(2)}, ${lng.toFixed(2)}`;
         try {
           const geoUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=10&accept-language=tr`;
-          const geoRes = await fetch(geoUrl, { headers: { 'User-Agent': 'Turanda-Tarim' } });
+          const geoRes = await fetch(geoUrl, { signal });
           if (geoRes.ok) {
             const geoData = await geoRes.json();
-            const addr = geoData.address;
+            const addr = geoData.address ?? {};
             locationName = addr.city || addr.town || addr.village || addr.county || addr.state || locationName;
           }
         } catch { /* reverse geocoding is optional */ }
 
+        if (signal.aborted) return;
         setWeather({
           current: {
             temperature: data.current?.temperature_2m ?? 0,
@@ -98,13 +106,16 @@ export function useWeather(lat?: number, lng?: number) {
           location: { name: locationName, latitude: lat, longitude: lng },
         });
       } catch (err) {
+        if (signal.aborted) return;
+        setWeather(null);
         setError(err instanceof Error ? err.message : 'Unknown error');
       } finally {
-        setLoading(false);
+        if (!signal.aborted) setLoading(false);
       }
     };
 
     fetchWeather();
+    return () => controller.abort();
   }, [lat, lng]);
 
   return { weather, loading, error };
