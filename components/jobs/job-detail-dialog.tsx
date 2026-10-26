@@ -23,7 +23,7 @@ export function JobDetailDialog({ job, open, onOpenChange, onApply }: JobDetailD
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[560px] max-h-[85vh] overflow-y-auto">
+      <DialogContent className="bg-background sm:max-w-[560px] max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <Badge className="w-fit mb-1" variant="outline">{translateJobType(job.job_type, locale)}</Badge>
           <DialogTitle className="text-xl text-primary">{job.title}</DialogTitle>

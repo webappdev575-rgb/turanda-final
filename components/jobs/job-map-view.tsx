@@ -205,7 +205,8 @@ export function JobMapView({
             icon: L.divIcon({
               className: 'tr-province-label',
               html: `<span>${name}</span>`,
-              iconSize: undefined,
+              iconSize: [0, 0],
+              iconAnchor: [0, 0],
             }),
           }).addTo(labels);
         }
@@ -388,7 +389,6 @@ export function JobMapView({
         marker.on('click', (e: L.LeafletMouseEvent) => {
           L.DomEvent.stopPropagation(e);
           setPopupJob(job);
-          onJobSelect?.(job);
         });
         jobMarkersRef.current.set(job.id, marker);
       } else {
@@ -538,7 +538,10 @@ export function JobMapView({
           white-space: nowrap !important;
         }
         .tr-map-tooltip::before { display: none !important; }
-        .tr-province-label {
+        .tr-province-label,
+        .tr-province-label.leaflet-div-icon {
+          background: transparent !important;
+          border: 0 !important;
           color: ${isDark ? '#fff8df' : '#102d20'} !important;
           font-size: 10px !important;
           font-weight: 800 !important;
@@ -663,7 +666,7 @@ export function JobMapView({
 
           {/* Popup */}
           {popupJob && (
-            <div className="pointer-events-auto absolute left-1/2 top-3 z-[1000] w-72 -translate-x-1/2 overflow-hidden rounded-xl border border-border bg-background/95 shadow-xl backdrop-blur animate-fade-in">
+            <div className="pointer-events-auto absolute left-1/2 top-3 z-[1000] w-72 -translate-x-1/2 overflow-hidden rounded-xl border border-border bg-background shadow-xl animate-fade-in">
               <div className="flex items-start justify-between gap-2 border-b border-border px-3 py-2">
                 <p className="line-clamp-1 text-sm font-bold text-foreground">{popupJob.title}</p>
                 <button
