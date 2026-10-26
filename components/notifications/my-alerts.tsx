@@ -20,6 +20,7 @@ const statusConfig: Record<NotificationStatus, { icon: typeof Clock; className: 
   pending: { icon: Clock, className: 'bg-accent/15 text-accent-foreground border-accent/30', labelKey: 'alerts.statusPending' },
   sent: { icon: CheckCircle2, className: 'bg-success/15 text-success border-success/30', labelKey: 'alerts.statusSent' },
   failed: { icon: XCircle, className: 'bg-destructive/10 text-destructive border-destructive/30', labelKey: 'alerts.statusFailed' },
+  uncertain: { icon: Clock, className: 'bg-accent/15 text-accent-foreground border-accent/30', labelKey: 'alerts.statusUncertain' },
 };
 
 export function MyAlerts() {

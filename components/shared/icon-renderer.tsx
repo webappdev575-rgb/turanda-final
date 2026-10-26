@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { icons as LucideIcons, Wheat } from 'lucide-react';
+import { sanitizeSvg } from '@/lib/svg-sanitizer';
 import { supabase } from '@/lib/supabase';
 
 export interface IconInfo {
@@ -27,12 +28,13 @@ export function IconRenderer({ icon, className = 'h-5 w-5', fallback = 'Wheat' }
       setSvgContent(null);
       return;
     }
+    setSvgContent(null);
     let cancelled = false;
     (async () => {
       const { data } = await supabase.storage.from('icons').download(path);
       if (data && !cancelled) {
         const text = await data.text();
-        setSvgContent(text);
+        if (!cancelled) setSvgContent(sanitizeSvg(text));
       }
     })();
     return () => { cancelled = true; };

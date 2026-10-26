@@ -1,3 +1,4 @@
+import { authorizeStaff } from '../_shared/authorization.ts';
 Deno.serve(async (req: Request) => {
   const corsHeaders = {
     "Access-Control-Allow-Origin": "*",
@@ -7,6 +8,13 @@ Deno.serve(async (req: Request) => {
 
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 200, headers: corsHeaders });
+  }
+
+  if (req.method !== "POST") {
+    return new Response(JSON.stringify({ error: "Method not allowed" }), { status: 405, headers: { ...corsHeaders, "Content-Type": "application/json", Allow: "POST, OPTIONS" } });
+  }
+  if (!(await authorizeStaff(req, ['is_admin']))) {
+    return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 
   try {
@@ -28,6 +36,12 @@ Deno.serve(async (req: Request) => {
 
     const body = await req.json().catch(() => ({}));
     const { notificationId, batch } = body;
+    if ((notificationId !== undefined && (typeof notificationId !== 'string' || !/^[0-9a-f-]{36}$/i.test(notificationId))) ||
+        (batch !== undefined && (!Number.isInteger(batch) || batch < 1 || batch > 50))) {
+      return new Response(JSON.stringify({ error: 'Invalid notification request' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     const supabaseHeaders = {
       Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
@@ -35,13 +49,10 @@ Deno.serve(async (req: Request) => {
       "Content-Type": "application/json",
     };
 
-    // Fetch notifications to send
+    // Batch delivery handles pending rows; explicit retries may include failed rows.
     let url = `${SUPABASE_URL}/rest/v1/notifications?select=*`;
-    let filterParam = "";
-
     if (notificationId) {
-      filterParam = `&id=eq.${notificationId}`;
-      url += filterParam;
+      url += `&id=eq.${notificationId}&status=in.(pending,failed)`;
     } else {
       url += `&status=eq.pending&limit=${batch || 20}`;
     }
@@ -70,55 +81,70 @@ Deno.serve(async (req: Request) => {
     let failedCount = 0;
 
     for (const notif of notifications) {
+      let started = false;
       try {
+        // Reserve before contacting Resend. A crash or unknown outcome must not
+        // leave the row eligible for another batch or an unreconciled retry.
+        const reservation = await fetch(`${SUPABASE_URL}/rest/v1/notifications?id=eq.${notif.id}&status=eq.${notif.status === 'pending' ? 'pending' : 'failed'}`, {
+          method: "PATCH",
+          headers: { ...supabaseHeaders, Prefer: "return=representation" },
+          body: JSON.stringify({
+            status: "uncertain",
+            error_message: "Delivery started; reconcile provider status before retrying an unconfirmed delivery.",
+          }),
+        });
+        if (!reservation.ok) { failedCount++; continue; }
+        const reserved = await reservation.json();
+        if (!Array.isArray(reserved) || reserved.length === 0) continue;
+        started = true;
+        const delivery = reserved[0];
         const resendResponse = await fetch("https://api.resend.com/emails", {
           method: "POST",
           headers: {
             Authorization: `Bearer ${RESEND_API_KEY}`,
             "Content-Type": "application/json",
+            "Idempotency-Key": `notification/${notif.id}`,
           },
           body: JSON.stringify({
             from: "Turanda <noreply@resend.dev>",
-            to: notif.recipient_email,
-            subject: notif.subject,
-            html: notif.body,
+            to: delivery.recipient_email,
+            subject: delivery.subject,
+            html: delivery.body,
           }),
         });
 
+        // Another request may still be completing; never downgrade its status.
+        if (resendResponse.status === 409) { failedCount++; continue; }
         if (resendResponse.ok) {
-          // Mark as sent
-          await fetch(`${SUPABASE_URL}/rest/v1/notifications?id=eq.${notif.id}`, {
+          const confirmation = await fetch(`${SUPABASE_URL}/rest/v1/notifications?id=eq.${notif.id}&status=eq.uncertain`, {
             method: "PATCH",
-            headers: supabaseHeaders,
-            body: JSON.stringify({
-              status: "sent",
-              sent_at: new Date().toISOString(),
-              error_message: null,
-            }),
+            headers: { ...supabaseHeaders, Prefer: "return=representation" },
+            body: JSON.stringify({ status: "sent", sent_at: new Date().toISOString(), error_message: null }),
           });
-          sentCount++;
+          if (!confirmation.ok) { failedCount++; continue; }
+          const confirmed = await confirmation.json();
+          if (Array.isArray(confirmed) && confirmed.some(row => row.status === 'sent')) sentCount++;
+          else failedCount++;
         } else {
           const errText = await resendResponse.text();
-          await fetch(`${SUPABASE_URL}/rest/v1/notifications?id=eq.${notif.id}`, {
-            method: "PATCH",
-            headers: supabaseHeaders,
-            body: JSON.stringify({
-              status: "failed",
-              error_message: errText.substring(0, 500),
-            }),
+          // Only definite client rejections are retryable. Timeouts/server errors
+          // may follow an accepted send and require provider reconciliation.
+          const definiteRejection = resendResponse.status >= 400 && resendResponse.status < 500 && resendResponse.status !== 408;
+          await fetch(`${SUPABASE_URL}/rest/v1/notifications?id=eq.${notif.id}&status=eq.uncertain`, {
+            method: "PATCH", headers: supabaseHeaders,
+            body: JSON.stringify({ status: definiteRejection ? "failed" : "uncertain", error_message: errText.substring(0, 500) }),
           });
           failedCount++;
         }
       } catch (err) {
-        const errMsg = err instanceof Error ? err.message : String(err);
-        await fetch(`${SUPABASE_URL}/rest/v1/notifications?id=eq.${notif.id}`, {
-          method: "PATCH",
-          headers: supabaseHeaders,
-          body: JSON.stringify({
-            status: "failed",
-            error_message: errMsg.substring(0, 500),
-          }),
-        });
+        if (started) {
+          const errMsg = err instanceof Error ? err.message : String(err);
+          // Reservation already excludes retries, even if this diagnostic write fails.
+          await fetch(`${SUPABASE_URL}/rest/v1/notifications?id=eq.${notif.id}&status=eq.uncertain`, {
+            method: "PATCH", headers: supabaseHeaders,
+            body: JSON.stringify({ error_message: `Unconfirmed delivery: ${errMsg}`.substring(0, 500) }),
+          }).catch(() => undefined);
+        }
         failedCount++;
       }
     }

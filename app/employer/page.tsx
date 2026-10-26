@@ -33,8 +33,8 @@ function daysLeft(featuredUntil: string | null): number | null {
 }
 
 export default function EmployerPage() {
-  const { jobs, loading, createJob, deleteJob, toggleJobStatus, refetch } = useJobs();
-  const { applications, loading: appsLoading, updateApplicationStatus } = useApplications();
+  const { jobs, loading, createJob, deleteJob, toggleJobStatus, refetch } = useJobs('owned');
+  const { applications: visibleApplications, loading: appsLoading, updateApplicationStatus } = useApplications();
   const [tab, setTab] = useState<Tab>('post');
   const { t } = useI18n();
   const { user, profile, loading: authLoading } = useAuth();
@@ -83,6 +83,7 @@ export default function EmployerPage() {
     );
   }
 
+  const applications = visibleApplications.filter(application => application.job?.employer_id === user.id);
   const activeJobs = jobs.filter((j) => j.status === 'active');
   const totalOpenings = activeJobs.reduce((sum, j) => sum + j.openings, 0);
   const pendingApps = applications.filter((a) => a.status === 'pending').length;

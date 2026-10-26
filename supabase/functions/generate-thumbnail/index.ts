@@ -1,4 +1,5 @@
-import { createClient } from "npm:@supabase/supabase-js@2.58.0";
+import { authorizeStaff } from '../_shared/authorization.ts';
+import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2.118.0";
 
 
 // Edge function: generates AI thumbnails for news articles
@@ -24,7 +25,7 @@ const fallbacks = [
 ];
 
 async function generateForArticle(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClient,
   article: { id: string; title: string; summary: string | null; category: string },
 ): Promise<string> {
   const categoryContext = article.category ? `Category: ${article.category}. ` : "";
@@ -78,6 +79,13 @@ async function generateForArticle(
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 200, headers: corsHeaders });
+  }
+
+  if (req.method !== "POST") {
+    return new Response(JSON.stringify({ error: "Method not allowed" }), { status: 405, headers: { ...corsHeaders, "Content-Type": "application/json", Allow: "POST, OPTIONS" } });
+  }
+  if (!(await authorizeStaff(req, ['is_admin', 'is_moderator', 'is_editor']))) {
+    return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 
   try {
@@ -134,7 +142,7 @@ Deno.serve(async (req: Request) => {
     );
   } catch (err) {
     return new Response(
-      JSON.stringify({ error: err.message }),
+      JSON.stringify({ error: "Thumbnail generation failed" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }

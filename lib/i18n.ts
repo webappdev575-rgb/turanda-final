@@ -718,6 +718,7 @@ export const translations = {
     'alerts.statusPending': 'Bekliyor',
     'alerts.statusSent': 'Gönderildi',
     'alerts.statusFailed': 'Başarısız',
+    'alerts.statusUncertain': 'Teslimat doğrulanmadı',
 
     // News page
     'nav.news': 'Haberler',
@@ -769,6 +770,7 @@ export const translations = {
     'tier.selected': 'Seçildi',
 
     // Checkout modal
+    'checkout.unavailable': 'Çevrimiçi ödeme şu anda kullanılamıyor. Ücretli ilanlar için bizimle iletişime geçin.',
     'checkout.title': 'Ödeme',
     'checkout.summary': 'Sipariş Özeti',
     'checkout.tier': 'Paket',
@@ -1874,6 +1876,7 @@ export const translations = {
     'alerts.statusPending': 'Pending',
     'alerts.statusSent': 'Sent',
     'alerts.statusFailed': 'Failed',
+    'alerts.statusUncertain': 'Delivery unconfirmed',
 
     // News page
     'nav.news': 'News',
@@ -1925,6 +1928,7 @@ export const translations = {
     'tier.selected': 'Selected',
 
     // Checkout modal
+    'checkout.unavailable': 'Online payments are currently unavailable. Contact us about paid listings.',
     'checkout.title': 'Checkout',
     'checkout.summary': 'Order Summary',
     'checkout.tier': 'Tier',
@@ -3009,6 +3013,7 @@ export const translations = {
     'alerts.statusPending': 'قيد الانتظار',
     'alerts.statusSent': 'تم الإرسال',
     'alerts.statusFailed': 'فشل',
+    'alerts.statusUncertain': 'التسليم غير مؤكد',
 
     // News page
     'nav.news': 'الأخبار',
@@ -3071,6 +3076,7 @@ export const translations = {
     'tier.benefit': 'ميزة',
     'tier.select': 'اختر',
     'tier.selected': 'مختار',
+    'checkout.unavailable': 'المدفوعات عبر الإنترنت غير متاحة حاليًا. تواصل معنا بشأن الإعلانات المدفوعة.',
     'checkout.title': 'الدفع',
     'checkout.summary': 'ملخص الطلب',
     'checkout.tier': 'الباقة',

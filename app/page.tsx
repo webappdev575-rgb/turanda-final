@@ -2,12 +2,15 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { ArrowRight, Leaf } from 'lucide-react';
 import Image from 'next/image';
 import { useCommodities } from '@/hooks/use-commodities';
 import { useNews } from '@/hooks/use-news';
 import { useI18n } from '@/components/i18n-provider';
-import { CommodityChartCard } from '@/components/home/commodity-chart-card';
+const CommodityChartCard = dynamic(() => import('@/components/home/commodity-chart-card').then(module => module.CommodityChartCard), {
+  loading: () => <div className="h-64 animate-pulse rounded-xl bg-muted" />,
+});
 import { NewsCycleCard } from '@/components/home/news-cycle-card';
 import { FigmaHero } from '@/components/home/figma-hero';
 import { FigmaInnovationSection } from '@/components/home/figma-innovation-section';

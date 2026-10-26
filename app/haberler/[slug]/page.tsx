@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react';
 import Link from 'next/link';
+import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import {
   ArrowLeft, Calendar, FileText, Loader2, MapPin, Newspaper, TrendingUp, Cloud,
@@ -41,7 +42,8 @@ function splitBodyWithAds(paragraphs: string[]) {
   return out;
 }
 
-export default function NewsArticlePage({ params }: { params: { slug: string } }) {
+export default function NewsArticlePage() {
+  const params = useParams<{ slug: string }>();
   const { locale, t } = useI18n();
   const { article, loading, error } = useNewsArticle(params.slug);
 

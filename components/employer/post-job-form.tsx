@@ -59,7 +59,6 @@ export function PostJobForm({ onSubmit, onSuccess }: PostJobFormProps) {
   const [success, setSuccess] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [comparisonOpen, setComparisonOpen] = useState(false);
-  const [pendingInput, setPendingInput] = useState<JobInput | null>(null);
   const [recaptchaToken, setRecaptchaToken] = useState('');
 
   const addRequirement = () => { if (newRequirement.trim()) { setRequirements([...requirements, newRequirement.trim()]); setNewRequirement(''); } };
@@ -83,8 +82,7 @@ export function PostJobForm({ onSubmit, onSuccess }: PostJobFormProps) {
       description: description.trim(), location, latitude: coords.lat, longitude: coords.lng,
       wage: null, wage_min: minVal, wage_max: maxVal, wage_unit: wageUnit, duration: duration.trim(),
       requirements, openings: parseInt(openings) || 1, skills, language,
-      is_featured: featuredTier !== 'standard', featured_tier: featuredTier,
-      payment_status: featuredTier === 'standard' ? 'free' : 'pending',
+      is_featured: false, featured_tier: 'standard', payment_status: 'free',
     };
 
     if (featuredTier === 'standard') {
@@ -96,7 +94,6 @@ export function PostJobForm({ onSubmit, onSuccess }: PostJobFormProps) {
         setTimeout(() => { setSuccess(false); onSuccess?.(); }, 2000);
       }
     } else {
-      setPendingInput(input);
       setCheckoutOpen(true);
     }
   };
@@ -107,25 +104,6 @@ export function PostJobForm({ onSubmit, onSuccess }: PostJobFormProps) {
     setRequirements([]); setSkills([]); setLanguage('tr'); setFeaturedTier('standard');
   };
 
-  const handleCheckoutSuccess = async () => {
-    if (!pendingInput) return;
-    const now = new Date();
-    const featuredUntil = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
-    const input: JobInput = {
-      ...pendingInput,
-      is_featured: true,
-      featured_tier: pendingInput.featured_tier,
-      featured_until: featuredUntil,
-      payment_status: 'paid',
-    };
-    setSubmitting(true);
-    const result = await onSubmit(input);
-    setSubmitting(false);
-    if (result.error) { setError(result.error); } else {
-      setSuccess(true); resetForm(); setPendingInput(null);
-      setTimeout(() => { setSuccess(false); onSuccess?.(); }, 2000);
-    }
-  };
 
   if (success) {
     return (
@@ -270,9 +248,11 @@ export function PostJobForm({ onSubmit, onSuccess }: PostJobFormProps) {
                 <button
                   key={tier.value}
                   type="button"
+                  disabled={tier.value !== 'standard'}
+                  aria-describedby={tier.value !== 'standard' ? 'paid-listings-unavailable' : undefined}
                   onClick={() => setFeaturedTier(tier.value)}
                   className={cn(
-                    'flex flex-col items-center gap-1.5 rounded-lg border-2 p-3 transition-all',
+                    'flex flex-col items-center gap-1.5 rounded-lg border-2 p-3 transition-all disabled:cursor-not-allowed disabled:opacity-50',
                     selected
                       ? tier.value === 'pinned'
                         ? 'border-emerald-400 bg-emerald-50/40'
@@ -289,6 +269,7 @@ export function PostJobForm({ onSubmit, onSuccess }: PostJobFormProps) {
               );
             })}
           </div>
+          <p id="paid-listings-unavailable" className="text-sm text-muted-foreground">{t('checkout.unavailable')}</p>
           <div className="overflow-hidden rounded-lg border border-border">
             <table className="w-full text-xs">
               <thead className="bg-muted/30">
@@ -347,7 +328,6 @@ export function PostJobForm({ onSubmit, onSuccess }: PostJobFormProps) {
         open={checkoutOpen}
         onOpenChange={setCheckoutOpen}
         tierInfo={getTierInfo(featuredTier)}
-        onSuccess={handleCheckoutSuccess}
       />
 
       <Dialog open={comparisonOpen} onOpenChange={setComparisonOpen}>

@@ -1,4 +1,4 @@
-import { createClient } from "npm:@supabase/supabase-js@2.58.0";
+import { createClient } from "npm:@supabase/supabase-js@2.118.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -44,11 +44,11 @@ Deno.serve(async (req: Request) => {
 
     const { data: profile } = await userClient
       .from("profiles")
-      .select("is_admin")
+      .select("is_admin, is_banned")
       .eq("id", user.id)
       .maybeSingle();
 
-    if (!profile?.is_admin) {
+    if (!profile?.is_admin || profile.is_banned) {
       return new Response(JSON.stringify({ error: "Forbidden" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -58,13 +58,14 @@ Deno.serve(async (req: Request) => {
     const body = await req.json() as AdminUserActionRequest;
     const { action, userId, value } = body;
 
-    if (!action || !userId || typeof value !== "boolean") {
+    if (!["set_admin_status", "set_user_ban_status", "set_moderator_status", "set_editor_status"].includes(action) || typeof userId !== "string" || !/^[0-9a-f-]{36}$/i.test(userId) || typeof value !== "boolean") {
       return new Response(JSON.stringify({ error: "Missing required fields" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
+    const rpcParams: Record<string, string | boolean> = { p_user_id: userId };
     if (action === "set_admin_status") {
       rpcParams.p_is_admin = value;
     } else if (action === "set_moderator_status") {
@@ -91,7 +92,7 @@ Deno.serve(async (req: Request) => {
     });
   } catch (err) {
     return new Response(
-      JSON.stringify({ error: err.message }),
+      JSON.stringify({ error: "Administrative action failed" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }

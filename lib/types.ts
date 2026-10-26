@@ -25,6 +25,7 @@ export type PaymentStatus = 'free' | 'pending' | 'paid' | 'failed';
 
 export interface Job {
   id: string;
+  employer_id: string | null;
   title: string;
   farm_name: string;
   job_type: JobType;
@@ -183,7 +184,7 @@ export interface CommodityCategory {
   translation_ar: string;
 }
 
-export type NotificationStatus = 'pending' | 'sent' | 'failed';
+export type NotificationStatus = 'pending' | 'sent' | 'failed' | 'uncertain';
 export type NotificationType = 'job_application' | 'application_status' | 'new_message';
 
 export type SenderRole = 'employer' | 'applicant';
