@@ -417,6 +417,11 @@ export const translations = {
     'akademi.signInToEnroll': 'Kaydolmak için giriş yapın',
     'akademi.categoryAll': 'Tüm Kategoriler',
     'akademi.difficultyAll': 'Tüm Seviyeler',
+    'akademi.workshopsTitle': 'Yüz Yüze Atölyeler',
+    'akademi.workshopsDesc': 'Uzman eğitmenlerle sahada uygulayarak öğrenin — kontenjanlar sınırlı.',
+    'akademi.workshopSeats': 'kişilik kontenjan',
+    'akademi.workshopRegister': 'Yer Ayır',
+    'akademi.onlineBadge': 'Online',
 
     // Job language
     'joblang.title': 'İlan Dili',
@@ -1568,6 +1573,11 @@ export const translations = {
     'akademi.signInToEnroll': 'Sign in to enroll',
     'akademi.categoryAll': 'All Categories',
     'akademi.difficultyAll': 'All Levels',
+    'akademi.workshopsTitle': 'In-Person Workshops',
+    'akademi.workshopsDesc': 'Learn hands-on in the field with expert instructors — seats are limited.',
+    'akademi.workshopSeats': 'seats available',
+    'akademi.workshopRegister': 'Reserve a Seat',
+    'akademi.onlineBadge': 'Online',
 
     // Job language
     'joblang.title': 'Posting Language',
@@ -2711,6 +2721,11 @@ export const translations = {
     'akademi.signInToEnroll': 'سجل الدخول للتسجيل',
     'akademi.categoryAll': 'جميع الفئات',
     'akademi.difficultyAll': 'جميع المستويات',
+    'akademi.workshopsTitle': 'ورش عمل حضورية',
+    'akademi.workshopsDesc': 'تعلم عملياً في الميدان مع مدربين خبراء — الأماكن محدودة.',
+    'akademi.workshopSeats': 'مقعداً متاحاً',
+    'akademi.workshopRegister': 'احجز مكانك',
+    'akademi.onlineBadge': 'عبر الإنترنت',
 
     // Job language
     'joblang.title': 'لغة الإعلان',

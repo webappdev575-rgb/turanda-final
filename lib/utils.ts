@@ -45,7 +45,6 @@ export function effectiveWage(
   return min ?? max ?? legacy ?? 0;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function getJobTranslatedField(
   job: any,
   baseField: 'title' | 'description' | 'location' | 'requirements',

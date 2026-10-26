@@ -26,8 +26,8 @@ const themeContent: Record<
     support1: 'red.themeAutomatedSupport1',
     support2: 'red.themeAutomatedSupport2',
     image:
-      'https://images.pexels.com/photos/2889590/pexels-photo-2889590.jpeg?auto=compress&cs=tinysrgb&h=650&w=940',
-    alt: 'Commodity market prices on display',
+      'https://images.pexels.com/photos/38261515/pexels-photo-38261515.jpeg?auto=compress&cs=tinysrgb&h=650&w=940',
+    alt: 'Turkish bazaar vendor with fresh vegetables',
   },
   biomedical: {
     title: 'red.themeBiomedicalTitle',

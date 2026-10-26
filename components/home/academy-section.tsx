@@ -16,7 +16,7 @@ type TranslationKey = Parameters<ReturnType<typeof useI18n>['t']>[0];
 
 const SLIDES: { image: string; badgeKey: TranslationKey }[] = [
   {
-    image: 'https://images.unsplash.com/photo-1535090467336-9501f96eef89?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=85&w=1200',
+    image: 'https://images.pexels.com/photos/20356942/pexels-photo-20356942.jpeg?auto=compress&cs=tinysrgb&fit=max&fm=jpg&q=85&w=1200',
     badgeKey: 'akademi.badgeLabel',
   },
   {

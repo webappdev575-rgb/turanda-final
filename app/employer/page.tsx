@@ -126,7 +126,7 @@ export default function EmployerPage() {
             <p className="text-sm font-medium text-foreground">{t('employer.calloutTitle')}</p>
           </div>
           <div className="flex items-center gap-2">
-            <Button size="sm" variant="outline" onClick={() => setComparisonOpen(true)} className="border-amber-300 text-amber-700 hover:bg-amber-100">
+            <Button size="sm" variant="outline" onClick={() => setComparisonOpen(true)} className="border-orange-400 bg-orange-500 text-white hover:bg-orange-600 hover:text-white dark:border-orange-400">
               {t('employer.calloutButton')}
             </Button>
             <button onClick={dismissCallout} className="rounded-md p-1 text-muted-foreground hover:bg-muted/50">

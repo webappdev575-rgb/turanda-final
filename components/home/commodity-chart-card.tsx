@@ -29,7 +29,7 @@ interface TooltipState {
   point: ChartPoint;
 }
 
-function buildDailyAverages(prices: CommodityPrice[], commodityName: string): ChartPoint[] {
+function buildDailyAverages(prices: CommodityPrice[], commodityName: string, locale: string): ChartPoint[] {
   const byDate = new Map<string, { sum: number; count: number }>();
   prices.forEach((p) => {
     if (p.commodity_name !== commodityName) return;
@@ -39,12 +39,16 @@ function buildDailyAverages(prices: CommodityPrice[], commodityName: string): Ch
     entry.count += 1;
     byDate.set(day, entry);
   });
+  const dateFmt = new Intl.DateTimeFormat(locale === 'en' ? 'en-GB' : locale === 'ar' ? 'ar' : 'tr-TR', {
+    day: '2-digit',
+    month: 'short',
+  });
   return Array.from(byDate.entries())
     .sort(([a], [b]) => a.localeCompare(b))
     .slice(-7)
     .map(([day, { sum, count }]) => {
       const d = new Date(`${day}T00:00:00`);
-      const label = `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const label = dateFmt.format(d);
       return {
         date: day,
         label,
@@ -57,6 +61,7 @@ function buildLatestDayByExchange(
   prices: CommodityPrice[],
   commodityName: string,
   exchangeMap: Map<string, string>,
+  locale: string,
 ): ChartPoint[] {
   const commodityPrices = prices.filter((p) => p.commodity_name === commodityName);
   if (commodityPrices.length === 0) return [];
@@ -66,15 +71,25 @@ function buildLatestDayByExchange(
     .sort()
     .pop();
 
+  const d = latestDate ? new Date(`${latestDate.slice(0, 10)}T00:00:00`) : null;
+  const dayLabel = d
+    ? new Intl.DateTimeFormat(locale === 'en' ? 'en-GB' : locale === 'ar' ? 'ar' : 'tr-TR', {
+        day: '2-digit',
+        month: 'short',
+      }).format(d)
+    : '';
+
   return commodityPrices
     .filter((p) => p.recorded_date === latestDate)
     .sort((a, b) => a.price - b.price)
     .map((p) => ({
       date: p.recorded_date,
-      label: exchangeMap.get(p.exchange_id) ?? '—',
+      label: exchangeMap.get(p.exchange_id) ?? dayLabel,
       price: p.price / 1000,
     }));
 }
+
+const DAY_CHANGE_WINDOW_MS = 3 * 24 * 60 * 60 * 1000;
 
 function dayChangePct(prices: CommodityPrice[], commodityName: string): number {
   const days = new Map<string, number[]>();
@@ -88,8 +103,16 @@ function dayChangePct(prices: CommodityPrice[], commodityName: string): number {
   const sortedDays = Array.from(days.keys()).sort();
   if (sortedDays.length < 2) return 0;
   const avg = (list: number[]) => list.reduce((a, b) => a + b, 0) / list.length;
-  const today = avg(days.get(sortedDays[sortedDays.length - 1]) ?? []);
-  const yesterday = avg(days.get(sortedDays[sortedDays.length - 2]) ?? []);
+  const todayDay = sortedDays[sortedDays.length - 1];
+  // Walk back to the newest earlier day within the window so a sparse
+  // history (e.g. an October baseline row) is never read as "today's" move.
+  const todayMs = new Date(`${todayDay}T00:00:00`).getTime();
+  const prevDay = [...sortedDays]
+    .reverse()
+    .find((d) => d !== todayDay && todayMs - new Date(`${d}T00:00:00`).getTime() <= DAY_CHANGE_WINDOW_MS);
+  if (!prevDay) return 0;
+  const today = avg(days.get(todayDay) ?? []);
+  const yesterday = avg(days.get(prevDay) ?? []);
   if (yesterday === 0) return 0;
   return ((today - yesterday) / yesterday) * 100;
 }
@@ -122,12 +145,12 @@ export function CommodityChartCard({
   );
 
   const series = useMemo(() => {
-    if (range === '7d') return buildDailyAverages(prices, activeName);
-    const byExchange = buildLatestDayByExchange(prices, activeName, exchangeMap);
+    if (range === '7d') return buildDailyAverages(prices, activeName, locale);
+    const byExchange = buildLatestDayByExchange(prices, activeName, exchangeMap, locale);
     return byExchange.length >= 2
       ? byExchange
-      : buildDailyAverages(prices, activeName).slice(-5);
-  }, [prices, activeName, range, exchangeMap]);
+      : buildDailyAverages(prices, activeName, locale).slice(-5);
+  }, [prices, activeName, range, exchangeMap, locale]);
 
   const fmt = (value: number) =>
     value.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -248,8 +271,11 @@ export function CommodityChartCard({
                       tick={{ fill: '#617069', fontSize: 10 }}
                       axisLine={{ stroke: '#15231d26' }}
                       tickLine={false}
-                      interval="preserveStartEnd"
-                      minTickGap={8}
+                      interval={0}
+                      angle={-35}
+                      textAnchor="end"
+                      height={44}
+                      tickMargin={6}
                     />
                     <YAxis hide domain={[`dataMin - ${yPadding}`, `dataMax + ${yPadding}`]} />
                     <Tooltip cursor={false} content={() => null} />

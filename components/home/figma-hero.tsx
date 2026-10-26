@@ -116,16 +116,9 @@ export function FigmaHero() {
     <section className="relative flex w-full flex-col items-stretch overflow-hidden bg-[#fffdf6] dark:bg-[#0b1611]">
       {/* Wind-drifting dandelions, petals and specks across the dark header area */}
       <HeroFloatLayer />
+      {/* Heading — badge removed, moved up */}
       <header className="relative z-10 mx-auto flex w-full max-w-[1024px] flex-col items-center px-4 pt-[54px] sm:px-8 lg:px-0">
-        <div className="flex w-full items-center justify-center">
-          <div className="inline-flex items-center gap-2">
-            <span className="h-1.5 w-1.5 rounded-full bg-[#2e7d4f]" />
-            <span className="text-center text-xs font-bold leading-4 text-[#14563d] dark:text-[#c9e7b8]">
-              {t('red.heroBadge')}
-            </span>
-          </div>
-        </div>
-        <div className="flex w-full flex-col items-center pt-5">
+        <div className="flex w-full flex-col items-center pt-2">
           <h1 className="w-full max-w-[896px] text-center text-[clamp(2.25rem,7vw,5.5rem)] font-semibold leading-[0.94] tracking-[-0.055em] text-[#15231d] dark:text-[#f5f3eb]">
             {t('red.heroTitle')}
           </h1>
@@ -255,7 +248,7 @@ export function FigmaHero() {
               aria-hidden="true"
             />
             <div className="absolute inset-x-0 top-0 h-48 bg-[linear-gradient(180deg,#fffdf6_0%,#fffdf6_35%,rgba(255,253,246,0)_100%)] dark:bg-[linear-gradient(180deg,#0b1611_0%,#0b1611_35%,rgba(11,22,17,0)_100%)]" />
-            <div className="absolute inset-0 bg-[linear-gradient(0deg,rgba(250,250,248,0.95)_0%,rgba(250,250,248,0.35)_45%,rgba(250,250,248,0)_75%)] dark:bg-[linear-gradient(0deg,rgba(12,14,17,0.95)_0%,rgba(12,14,17,0.4)_45%,rgba(12,14,17,0)_75%)]" />
+            <div className="absolute inset-x-0 bottom-0 h-56 bg-[linear-gradient(0deg,rgba(8,39,29,0.8)_0%,rgba(8,39,29,0.25)_55%,rgba(8,39,29,0)_100%)] dark:bg-[linear-gradient(0deg,rgba(3,15,10,0.85)_0%,rgba(3,15,10,0.3)_55%,rgba(3,15,10,0)_100%)]" />
             <figcaption className="relative z-10 flex h-full w-full flex-col items-center justify-end px-4 pb-10 sm:px-8">
               <Reveal className="w-full max-w-[1205px]" delay={150}>
                 <div className="flex w-full flex-col items-center gap-6 sm:flex-row sm:items-end sm:justify-between sm:gap-16">
