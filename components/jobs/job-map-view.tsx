@@ -617,7 +617,6 @@ export function JobMapView({
         />
         <div className="mt-1 flex justify-between text-[11px] text-muted-foreground">
           <span>0 km</span>
-          <span>{t('jobs.jobsCount', { count: filteredJobs.length })}</span>
           <span>100 km</span>
         </div>
       </div>
