@@ -191,9 +191,19 @@ export function JobMapView({
                 const inRange = inRangeProvincesRef.current.has(name);
                 layerPath.setStyle(inRange ? { ...st.provinceInRange } : { ...st.province });
               },
-              click: () => {
-                // Close the tooltip so the province name box doesn't linger
+              mousedown: () => {
+                suppressMouseUpRef.current = true;
+              },
+              click: (e: L.LeafletMouseEvent) => {
+                L.DomEvent.stopPropagation(e);
                 layer.closeTooltip();
+                const centroid = PROVINCE_CENTROIDS[name];
+                if (centroid) {
+                  const next = keepRadiusInsideMap(centroid.lat, centroid.lng);
+                  onCenterChange(next.lat, next.lng);
+                  map.flyTo([next.lat, next.lng], Math.max(map.getZoom(), 8), { duration: 0.8 });
+                  void syncSearchLocation(next.lat, next.lng);
+                }
               },
             });
 
