@@ -8,7 +8,12 @@ import { useApplications } from '@/hooks/use-applications';
 import { JobCard } from '@/components/jobs/job-card';
 import { JobCompactRow } from '@/components/jobs/job-compact-row';
 import { JobFilters } from '@/components/jobs/job-filters';
-import { JobMapView } from '@/components/jobs/job-map-view';
+import dynamic from 'next/dynamic';
+
+const JobMapView = dynamic(() => import('@/components/jobs/job-map-view').then((m) => m.JobMapView), {
+  ssr: false,
+  loading: () => <div className="flex h-[400px] items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>,
+});
 import { ApplyDialog } from '@/components/jobs/apply-dialog';
 import { JobDetailDialog } from '@/components/jobs/job-detail-dialog';
 import { PredictiveSearch } from '@/components/shared/predictive-search';

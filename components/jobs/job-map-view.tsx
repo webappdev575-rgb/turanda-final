@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import L from 'leaflet';
 import {
   Map as MapIcon,
   MapPin,
@@ -21,16 +22,11 @@ import type { Job } from '@/lib/types';
 import type { PlaceMatch } from '@/lib/turkey-districts';
 import { cn, distanceKm } from '@/lib/utils';
 import { useI18n } from '@/components/i18n-provider';
+import { useTheme } from '@/components/theme-provider';
 import { Button } from '@/components/ui/button';
-import {
-  TURKEY_PROVINCES,
-  PROVINCE_CENTROIDS,
-  TR_MAP_VIEWBOX,
-  TR_MAP_GEO,
-  PIXELS_PER_DEG_LAT,
-  latLngToMapPixel,
-  mapPixelToLatLng,
-} from './turkey-map-data';
+
+// Fix default Leaflet marker icon paths (we use circle markers, but keep this safe)
+delete (L.Icon.Default.prototype as any)._getIconUrl;
 
 interface JobMapViewProps {
   jobs: Job[];
@@ -44,10 +40,32 @@ interface JobMapViewProps {
   selectedJobId?: string | null;
 }
 
-const MIN_ZOOM = 100;
-const MAX_ZOOM = 400;
-const ZOOM_FACTOR = 1.3;
-const CLICK_SLOP_PX = 6;
+// ---- Theme-aware style helpers ---------------------------------------------
+
+function themeStyles(isDark: boolean) {
+  return {
+    province: isDark
+      ? { fillColor: '#1e3a2f', color: '#2E7D4F', weight: 0.8, fillOpacity: 0.55 }
+      : { fillColor: '#d4e8d4', color: '#2E7D4F', weight: 1, fillOpacity: 0.5 },
+    provinceInRange: isDark
+      ? { fillColor: '#14563D', color: '#1a6b48', weight: 1.4, fillOpacity: 0.8 }
+      : { fillColor: '#14563D', color: '#0d3f2b', weight: 1.4, fillOpacity: 0.6 },
+    provinceHover: isDark
+      ? { fillColor: '#2E7D4F', color: '#3a9a62', weight: 1.6, fillOpacity: 0.7 }
+      : { fillColor: '#a8d5a8', color: '#1a6b48', weight: 1.6, fillOpacity: 0.7 },
+    radiusCircle: isDark
+      ? { color: '#1a8a55', weight: 1.5, dashArray: '5,4', fillColor: '#14563D', fillOpacity: 0.08 }
+      : { color: '#14563D', weight: 1.5, dashArray: '5,4', fillColor: '#14563D', fillOpacity: 0.08 },
+    tooltip: isDark
+      ? { backgroundColor: '#1a2a22', textColor: '#f0ead6', borderColor: '#2E7D4F' }
+      : { backgroundColor: '#ffffff', textColor: '#1a3a28', borderColor: '#2E7D4F' },
+    markerInRange: '#D9A441',
+    markerOutOfRange: isDark ? '#6b7280' : '#9ca3af',
+    markerRing: '#B8860B',
+  };
+}
+
+// ---- Leaflet map component --------------------------------------------------
 
 export function JobMapView({
   jobs,
@@ -61,43 +79,28 @@ export function JobMapView({
   selectedJobId,
 }: JobMapViewProps) {
   const { t } = useI18n();
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
+
   const [hoveredJob, setHoveredJob] = useState<string | null>(null);
   const [popupJob, setPopupJob] = useState<Job | null>(null);
-  const [zoom, setZoom] = useState(MIN_ZOOM);
-  const [pan, setPan] = useState({ x: 0, y: 0 });
-  const [panning, setPanning] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<PlaceMatch[]>([]);
   const [showResults, setShowResults] = useState(false);
   const [locating, setLocating] = useState(false);
-  const areaRef = useRef<HTMLDivElement | null>(null);
-  const [areaSize, setAreaSize] = useState({ width: 0, height: 0 });
-  const dragRef = useRef({ down: false, moved: false, lastX: 0, lastY: 0, startX: 0, startY: 0 });
-  const suppressClickRef = useRef(false);
-  const pinchRef = useRef<{ dist: number; zoom: number; vx: number; vy: number } | null>(null);
-  const transformRef = useRef({ zoom, pan });
-  transformRef.current = { zoom, pan };
+  const [geoError, setGeoError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const el = areaRef.current;
-    if (!el) return;
-    const observer = new ResizeObserver((entries) => {
-      const rect = entries[0].contentRect;
-      setAreaSize({ width: rect.width, height: rect.height });
-    });
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const mapRef = useRef<L.Map | null>(null);
+  const tileLayerRef = useRef<L.TileLayer | null>(null);
+  const geoJsonRef = useRef<L.GeoJSON | null>(null);
+  const radiusCircleRef = useRef<L.Circle | null>(null);
+  const centerMarkerRef = useRef<L.CircleMarker | null>(null);
+  const jobMarkersRef = useRef<Map<string, L.CircleMarker>>(new Map());
+  const provinceLayersRef = useRef<L.Layer[]>([]);
+  const inRangeProvincesRef = useRef<Set<string>>(new Set());
 
-  const center = latLngToMapPixel(centerLat, centerLng);
-  // 111 km per degree latitude; longitude degrees are shorter, so the circle is
-  // drawn as an ellipse using the mercator x-scale at the center latitude
-  const radiusKm = selectedRadius;
-  const radiusY = radiusKm / 111 * PIXELS_PER_DEG_LAT;
-  const kmPerDegLng = 111 * Math.cos((centerLat * Math.PI) / 180);
-  const scaleX = TR_MAP_VIEWBOX.width / (TR_MAP_GEO.maxLng - TR_MAP_GEO.minLng);
-  const radiusX = kmPerDegLng > 0 ? radiusKm / kmPerDegLng * scaleX : radiusY;
-
+  // ---- Derived data ----
   const filteredJobs = useMemo(() => {
     return jobs.filter((job) => {
       const dist = distanceKm(centerLat, centerLng, job.latitude, job.longitude);
@@ -105,67 +108,274 @@ export function JobMapView({
     });
   }, [jobs, centerLat, centerLng, selectedRadius]);
 
-  // Provinces highlighted once the user actively sets a search center;
-  // the untouched default center keeps the whole map neutral
   const inRangeProvinces = useMemo(() => {
     const set = new Set<string>();
     const hasActiveCenter =
       Math.abs(centerLat - MAP_CENTER.lat) > 0.01 || Math.abs(centerLng - MAP_CENTER.lng) > 0.01;
     if (!hasActiveCenter) return set;
-    for (const [title, c] of Object.entries(PROVINCE_CENTROIDS)) {
+    for (const [name, c] of Object.entries(PROVINCE_CENTROIDS)) {
       if (distanceKm(centerLat, centerLng, c.lat, c.lng) <= selectedRadius) {
-        set.add(title);
+        set.add(name);
       }
     }
     return set;
   }, [centerLat, centerLng, selectedRadius]);
 
+  // Keep a ref copy so Leaflet event handlers (which are bound once) can read it
+  inRangeProvincesRef.current = inRangeProvinces;
+
   const popupJobDist = popupJob
     ? Math.round(distanceKm(centerLat, centerLng, popupJob.latitude, popupJob.longitude))
     : 0;
 
-  // Letterbox fit: the wide Turkey viewBox is centered inside the taller
-  // container. All pointer math must go through this or taps land wrong.
-  const fit =
-    areaSize.width > 0
-      ? Math.min(areaSize.width / TR_MAP_VIEWBOX.width, areaSize.height / TR_MAP_VIEWBOX.height)
-      : 0;
-  const mapScale = zoom / 100;
+  // ---- Initialize the Leaflet map once ----
+  useEffect(() => {
+    if (!containerRef.current || mapRef.current) return;
 
-  const containerToVb = useCallback(
-    (px: number, py: number) => {
-      if (fit <= 0) return { x: TR_MAP_VIEWBOX.width / 2, y: TR_MAP_VIEWBOX.height / 2 };
-      return {
-        x: (px - areaSize.width / 2 - pan.x) / (fit * mapScale) + TR_MAP_VIEWBOX.width / 2,
-        y: (py - areaSize.height / 2 - pan.y) / (fit * mapScale) + TR_MAP_VIEWBOX.height / 2,
-      };
-    },
-    [areaSize, fit, mapScale, pan.x, pan.y],
-  );
+    const map = L.map(containerRef.current, {
+      center: [centerLat, centerLng],
+      zoom: 6,
+      minZoom: 5,
+      maxZoom: 14,
+      zoomControl: false,
+      attributionControl: true,
+      scrollWheelZoom: true,
+    });
+    mapRef.current = map;
 
-  const vbToContainer = useCallback(
-    (vx: number, vy: number) => {
-      if (fit <= 0) return { x: areaSize.width / 2, y: areaSize.height / 2 };
-      return {
-        x: areaSize.width / 2 + (vx - TR_MAP_VIEWBOX.width / 2) * fit * mapScale + pan.x,
-        y: areaSize.height / 2 + (vy - TR_MAP_VIEWBOX.height / 2) * fit * mapScale + pan.y,
-      };
-    },
-    [areaSize, fit, mapScale, pan.x, pan.y],
-  );
+    // Base tile layer — swapped on theme change in a separate effect
+    const tileUrl = isDark
+      ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+      : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+    const tileLayer = L.tileLayer(tileUrl, {
+      attribution: '&copy; OpenStreetMap &copy; CARTO',
+      subdomains: 'abcd',
+      maxZoom: 19,
+    }).addTo(map);
+    tileLayerRef.current = tileLayer;
 
-  const clampPan = useCallback(
-    (x: number, y: number, s: number, f: number): { x: number; y: number } => {
-      const maxX = (TR_MAP_VIEWBOX.width * f * (s - 1)) / 2;
-      const maxY = (TR_MAP_VIEWBOX.height * f * (s - 1)) / 2;
-      return {
-        x: Math.max(-maxX, Math.min(maxX, x)),
-        y: Math.max(-maxY, Math.min(maxY, y)),
-      };
-    },
-    [],
-  );
+    // Add zoom control to bottom-right
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
 
+    // Load GeoJSON province boundaries
+    fetch('/turkey-provinces.geojson')
+      .then((r) => r.json())
+      .then((data) => {
+        const s = themeStyles(isDark);
+        const geo = L.geoJSON(data, {
+          style: () => ({ ...s.province }),
+          onEachFeature: (feature, layer) => {
+            const name = feature.properties?.name ?? '';
+            const baseStyle = { ...s.province };
+            const hoverStyle = { ...s.provinceHover };
+            const inRangeStyle = { ...s.provinceInRange };
+
+            layer.bindTooltip(name, {
+              sticky: true,
+              direction: 'top',
+              className: 'tr-map-tooltip',
+              opacity: 1,
+            });
+
+            const layerPath = layer as L.Path;
+            layer.on({
+              mouseover: () => {
+                const inRange = inRangeProvincesRef.current.has(name);
+                layerPath.setStyle(inRange ? { ...hoverStyle, fillColor: s.provinceInRange.fillColor } : hoverStyle);
+              },
+              mouseout: () => {
+                const inRange = inRangeProvincesRef.current.has(name);
+                layerPath.setStyle(inRange ? inRangeStyle : baseStyle);
+              },
+            });
+
+            provinceLayersRef.current.push(layer);
+          },
+        }).addTo(map);
+        geoJsonRef.current = geo;
+        // Fit the map to Turkey's bounds once loaded
+        try {
+          map.fitBounds(geo.getBounds(), { padding: [20, 20] });
+        } catch {
+          // bounds may not be ready
+        }
+      })
+      .catch(() => setGeoError('Map boundaries failed to load'));
+
+    // Map click → set search center (distinguishes click from drag via move threshold)
+    let mouseDownPos: { x: number; y: number } | null = null;
+    map.on('mousedown', (e: L.LeafletMouseEvent) => {
+      mouseDownPos = { x: e.containerPoint.x, y: e.containerPoint.y };
+    });
+    map.on('mouseup', (e: L.LeafletMouseEvent) => {
+      if (!mouseDownPos) return;
+      const moved = Math.hypot(
+        e.containerPoint.x - mouseDownPos.x,
+        e.containerPoint.y - mouseDownPos.y,
+      );
+      mouseDownPos = null;
+      // If the user barely moved, treat as a click → set center.
+      // If they dragged a meaningful distance, set center where they released.
+      if (moved < 5) {
+        onCenterChange(e.latlng.lat, e.latlng.lng);
+        setPopupJob(null);
+      } else {
+        // After a drag, set the center at the release point so the radius
+        // search updates to wherever the user let go.
+        onCenterChange(e.latlng.lat, e.latlng.lng);
+        setPopupJob(null);
+      }
+    });
+
+    return () => {
+      map.remove();
+      mapRef.current = null;
+      tileLayerRef.current = null;
+      geoJsonRef.current = null;
+      radiusCircleRef.current = null;
+      centerMarkerRef.current = null;
+      jobMarkersRef.current.clear();
+      provinceLayersRef.current = [];
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ---- Swap tile layer + restyle provinces when theme changes ----
+  useEffect(() => {
+    const map = mapRef.current;
+    const tile = tileLayerRef.current;
+    if (!map || !tile) return;
+
+    const newUrl = isDark
+      ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+      : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+    tile.setUrl(newUrl);
+
+    const s = themeStyles(isDark);
+    for (const layer of provinceLayersRef.current) {
+      const pathLayer = layer as L.Path;
+      const name = (pathLayer as L.Path & { feature?: { properties?: { name?: string } } }).feature?.properties?.name ?? '';
+      const inRange = inRangeProvincesRef.current.has(name);
+      pathLayer.setStyle(inRange ? { ...s.provinceInRange } : { ...s.province });
+    }
+    if (radiusCircleRef.current) {
+      radiusCircleRef.current.setStyle(s.radiusCircle);
+    }
+    if (centerMarkerRef.current) {
+      centerMarkerRef.current.setStyle({ color: '#14563D', fillColor: '#14563D', fillOpacity: 1 });
+    }
+    jobMarkersRef.current.forEach((marker, jobId) => {
+      const job = jobs.find((j) => j.id === jobId);
+      if (!job) return;
+      const inRange = filteredJobs.some((j) => j.id === job.id);
+      marker.setStyle({ fillColor: inRange ? s.markerInRange : s.markerOutOfRange });
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDark]);
+
+  // ---- Update province highlighting when radius/center changes ----
+  useEffect(() => {
+    const s = themeStyles(isDark);
+    for (const layer of provinceLayersRef.current) {
+      const pathLayer = layer as L.Path;
+      const name = (pathLayer as L.Path & { feature?: { properties?: { name?: string } } }).feature?.properties?.name ?? '';
+      const inRange = inRangeProvinces.has(name);
+      pathLayer.setStyle(inRange ? { ...s.provinceInRange } : { ...s.province });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inRangeProvinces]);
+
+  // ---- Draw / move the radius circle + center marker ----
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const s = themeStyles(isDark);
+
+    if (!radiusCircleRef.current) {
+      radiusCircleRef.current = L.circle([centerLat, centerLng], {
+        radius: selectedRadius * 1000,
+        ...s.radiusCircle,
+      }).addTo(map);
+    } else {
+      radiusCircleRef.current.setLatLng([centerLat, centerLng]);
+      radiusCircleRef.current.setRadius(selectedRadius * 1000);
+      radiusCircleRef.current.setStyle(s.radiusCircle);
+    }
+
+    if (!centerMarkerRef.current) {
+      centerMarkerRef.current = L.circleMarker([centerLat, centerLng], {
+        radius: 5,
+        color: '#14563D',
+        fillColor: '#14563D',
+        fillOpacity: 1,
+        weight: 1.5,
+      }).addTo(map);
+    } else {
+      centerMarkerRef.current.setLatLng([centerLat, centerLng]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [centerLat, centerLng, selectedRadius, isDark]);
+
+  // ---- Draw / update job markers ----
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const s = themeStyles(isDark);
+
+    const currentIds = new Set<string>();
+    for (const job of jobs) {
+      currentIds.add(job.id);
+      const inRange = filteredJobs.some((j) => j.id === job.id);
+      const isSelected = selectedJobId === job.id || popupJob?.id === job.id;
+      const isHovered = hoveredJob === job.id;
+      const radius = isSelected ? 8 : isHovered ? 7 : 5.5;
+
+      let marker = jobMarkersRef.current.get(job.id);
+      if (!marker) {
+        marker = L.circleMarker([job.latitude, job.longitude], {
+          radius,
+          color: '#fff',
+          weight: 1.2,
+          fillColor: inRange ? s.markerInRange : s.markerOutOfRange,
+          fillOpacity: 1,
+        }).addTo(map);
+
+        marker.on('mouseover', () => setHoveredJob(job.id));
+        marker.on('mouseout', () => setHoveredJob(null));
+        marker.on('click', (e: L.LeafletMouseEvent) => {
+          L.DomEvent.stopPropagation(e);
+          setPopupJob(job);
+          onJobSelect?.(job);
+        });
+        jobMarkersRef.current.set(job.id, marker);
+      } else {
+        marker.setLatLng([job.latitude, job.longitude]);
+        marker.setStyle({
+          radius,
+          fillColor: inRange ? s.markerInRange : s.markerOutOfRange,
+        });
+      }
+
+      // Highlight ring on hover/select
+      // (Leaflet circleMarker doesn't support a second stroke; we toggle weight)
+      if (isSelected || isHovered) {
+        marker.setStyle({ color: s.markerRing, weight: 2.5 });
+      } else {
+        marker.setStyle({ color: '#fff', weight: 1.2 });
+      }
+    }
+
+    // Remove markers for jobs no longer in the list
+    jobMarkersRef.current.forEach((marker, id) => {
+      if (!currentIds.has(id)) {
+        map.removeLayer(marker);
+        jobMarkersRef.current.delete(id);
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jobs, filteredJobs, selectedJobId, popupJob, hoveredJob]);
+
+  // ---- Search handlers ----
   const handleSearch = (query: string) => {
     setSearchQuery(query);
     if (query.trim().length < 1) {
@@ -181,9 +391,10 @@ export function JobMapView({
 
   const selectPlace = (place: PlaceMatch) => {
     onCenterChange(place.lat, place.lng);
-    setPan({ x: 0, y: 0 });
     setSearchQuery(place.label);
     setShowResults(false);
+    const map = mapRef.current;
+    if (map) map.flyTo([place.lat, place.lng], 9, { duration: 0.8 });
   };
 
   const handleLocate = () => {
@@ -205,8 +416,9 @@ export function JobMapView({
           const coords = CITY_COORDS[nearestCity];
           if (coords) {
             onCenterChange(coords.lat, coords.lng);
-            setPan({ x: 0, y: 0 });
             setSearchQuery(nearestCity);
+            const map = mapRef.current;
+            if (map) map.flyTo([coords.lat, coords.lng], 9, { duration: 0.8 });
           }
         }
         setLocating(false);
@@ -216,196 +428,39 @@ export function JobMapView({
     );
   };
 
-  const handleMapClick = useCallback(
-    (e: React.MouseEvent<HTMLDivElement>) => {
-      if (suppressClickRef.current) {
-        suppressClickRef.current = false;
-        return;
-      }
-      if (fit <= 0) return;
-      const rect = areaRef.current?.getBoundingClientRect();
-      if (!rect) return;
-      const vb = containerToVb(e.clientX - rect.left, e.clientY - rect.top);
-      const { lat, lng } = mapPixelToLatLng(vb.x, vb.y);
-      onCenterChange(lat, lng);
-      setPopupJob(null);
-    },
-    [containerToVb, fit, onCenterChange],
-  );
-
-  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (e.pointerType === 'mouse' && e.button !== 0) return;
-    suppressClickRef.current = false;
-    dragRef.current = { down: true, moved: false, lastX: e.clientX, lastY: e.clientY, startX: e.clientX, startY: e.clientY };
-    try {
-      areaRef.current?.setPointerCapture(e.pointerId);
-    } catch {
-      // capture unavailable — drag still works within the container
-    }
-  };
-
-  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    const d = dragRef.current;
-    if (!d.down) return;
-    const dx = e.clientX - d.lastX;
-    const dy = e.clientY - d.lastY;
-    if (!d.moved && Math.hypot(e.clientX - d.startX, e.clientY - d.startY) < CLICK_SLOP_PX) return;
-    d.moved = true;
-    d.lastX = e.clientX;
-    d.lastY = e.clientY;
-    setPanning(true);
-    setPan((p) => clampPan(p.x + dx, p.y + dy, mapScale, fit));
-  };
-
-  const endDrag = (e: React.PointerEvent<HTMLDivElement>) => {
-    const d = dragRef.current;
-    if (!d.down) return;
-    d.down = false;
-    setPanning(false);
-    if (d.moved) {
-      suppressClickRef.current = true;
-      try {
-        areaRef.current?.releasePointerCapture(e.pointerId);
-      } catch {
-        // pointer may already be released
-      }
-    }
-  };
-
-
-  const zoomAtContainerPoint = useCallback(
-    (px: number, py: number, factor: number) => {
-      const rect = areaRef.current?.getBoundingClientRect();
-      if (!rect || fit <= 0) return;
-      const { zoom: z, pan: p } = transformRef.current;
-      const s = z / 100;
-      const f = Math.min(rect.width / TR_MAP_VIEWBOX.width, rect.height / TR_MAP_VIEWBOX.height);
-      const vx = (px - rect.width / 2 - p.x) / (f * s) + TR_MAP_VIEWBOX.width / 2;
-      const vy = (py - rect.height / 2 - p.y) / (f * s) + TR_MAP_VIEWBOX.height / 2;
-      const nz = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z * factor));
-      const ns = nz / 100;
-      const next = clampPan(
-        px - rect.width / 2 - (vx - TR_MAP_VIEWBOX.width / 2) * f * ns,
-        py - rect.height / 2 - (vy - TR_MAP_VIEWBOX.height / 2) * f * ns,
-        ns,
-        f,
-      );
-      setZoom(nz);
-      setPan(next);
-    },
-    [clampPan, fit],
-  );
-
-  const zoomIn = () => {
-    const rect = areaRef.current?.getBoundingClientRect();
-    if (rect) zoomAtContainerPoint(rect.width / 2, rect.height / 2, ZOOM_FACTOR);
-  };
-  const zoomOut = () => {
-    const rect = areaRef.current?.getBoundingClientRect();
-    if (rect) zoomAtContainerPoint(rect.width / 2, rect.height / 2, 1 / ZOOM_FACTOR);
-  };
+  const zoomIn = () => mapRef.current?.zoomIn();
+  const zoomOut = () => mapRef.current?.zoomOut();
   const resetView = () => {
-    setZoom(MIN_ZOOM);
-    setPan({ x: 0, y: 0 });
-    setPopupJob(null);
-    onCenterChange(MAP_CENTER.lat, MAP_CENTER.lng);
-  };
-
-  // Wheel zoom (desktop) — native listener so preventDefault works
-  useEffect(() => {
-    const el = areaRef.current;
-    if (!el) return;
-    const onWheel = (e: WheelEvent) => {
-      e.preventDefault();
-      const rect = el.getBoundingClientRect();
-      zoomAtContainerPoint(e.clientX - rect.left, e.clientY - rect.top, e.deltaY < 0 ? 1.15 : 1 / 1.15);
-    };
-    el.addEventListener('wheel', onWheel, { passive: false });
-    return () => el.removeEventListener('wheel', onWheel);
-  }, [zoomAtContainerPoint]);
-
-  // Pinch zoom (touch) — native listeners so preventDefault works
-  useEffect(() => {
-    const el = areaRef.current;
-    if (!el) return;
-
-    const touchDist = (t: TouchList) =>
-      Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
-
-    const onTouchStart = (e: TouchEvent) => {
-      if (e.touches.length !== 2) {
-        pinchRef.current = null;
-        return;
+    const map = mapRef.current;
+    if (!map) return;
+    if (geoJsonRef.current) {
+      try {
+        map.fitBounds(geoJsonRef.current.getBounds(), { padding: [20, 20] });
+      } catch {
+        map.setView([MAP_CENTER.lat, MAP_CENTER.lng], 6);
       }
-      e.preventDefault();
-      const rect = el.getBoundingClientRect();
-      const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left;
-      const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top;
-      const { zoom: z, pan: p } = transformRef.current;
-      const s = z / 100;
-      const f = Math.min(rect.width / TR_MAP_VIEWBOX.width, rect.height / TR_MAP_VIEWBOX.height);
-      pinchRef.current = {
-        dist: touchDist(e.touches),
-        zoom: z,
-        vx: (midX - rect.width / 2 - p.x) / (f * s) + TR_MAP_VIEWBOX.width / 2,
-        vy: (midY - rect.height / 2 - p.y) / (f * s) + TR_MAP_VIEWBOX.height / 2,
-      };
-    };
-
-    const onTouchMove = (e: TouchEvent) => {
-      const g = pinchRef.current;
-      if (!g || e.touches.length !== 2) return;
-      e.preventDefault();
-      const rect = el.getBoundingClientRect();
-      const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left;
-      const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top;
-      const nz = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, g.zoom * (touchDist(e.touches) / g.dist)));
-      const ns = nz / 100;
-      const f = Math.min(rect.width / TR_MAP_VIEWBOX.width, rect.height / TR_MAP_VIEWBOX.height);
-      const next = clampPan(
-        midX - rect.width / 2 - (g.vx - TR_MAP_VIEWBOX.width / 2) * f * ns,
-        midY - rect.height / 2 - (g.vy - TR_MAP_VIEWBOX.height / 2) * f * ns,
-        ns,
-        f,
-      );
-      setZoom(nz);
-      setPan(next);
-    };
-
-    const onTouchEnd = () => {
-      pinchRef.current = null;
-    };
-
-    el.addEventListener('touchstart', onTouchStart, { passive: false });
-    el.addEventListener('touchmove', onTouchMove, { passive: false });
-    el.addEventListener('touchend', onTouchEnd);
-    return () => {
-      el.removeEventListener('touchstart', onTouchStart);
-      el.removeEventListener('touchmove', onTouchMove);
-      el.removeEventListener('touchend', onTouchEnd);
-    };
-  }, [clampPan]);
+    } else {
+      map.setView([MAP_CENTER.lat, MAP_CENTER.lng], 6);
+    }
+    onCenterChange(MAP_CENTER.lat, MAP_CENTER.lng);
+    setPopupJob(null);
+  };
 
   const zoomControls = (
     <>
       <button
         type="button"
         onClick={zoomOut}
-        disabled={zoom <= MIN_ZOOM}
         aria-label={t('jobs.mapZoomOut')}
-        className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-primary disabled:opacity-40"
+        className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-primary"
       >
         <Minus className="h-4 w-4" />
       </button>
-      <span className="w-11 text-center text-[11px] font-semibold tabular-nums text-foreground">
-        {Math.round(zoom)}%
-      </span>
       <button
         type="button"
         onClick={zoomIn}
-        disabled={zoom >= MAX_ZOOM}
         aria-label={t('jobs.mapZoomIn')}
-        className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-primary disabled:opacity-40"
+        className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-primary"
       >
         <Plus className="h-4 w-4" />
       </button>
@@ -423,7 +478,39 @@ export function JobMapView({
 
   return (
     <div className="space-y-3">
-      {/* Şehir/Adres Arama */}
+      {/* Leaflet CSS + tooltip styling */}
+      <style>{`
+        @import url('https://unpkg.com/leaflet@1.9.4/dist/leaflet.css');
+        .tr-map-tooltip {
+          background: ${isDark ? '#1a2a22' : '#ffffff'} !important;
+          border: 1px solid ${isDark ? '#2E7D4F' : '#2E7D4F'} !important;
+          color: ${isDark ? '#f0ead6' : '#1a3a28'} !important;
+          border-radius: 6px !important;
+          padding: 4px 10px !important;
+          font-size: 12px !important;
+          font-weight: 600 !important;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.15) !important;
+          white-space: nowrap !important;
+        }
+        .tr-map-tooltip::before { display: none !important; }
+        .leaflet-container { font-family: inherit !important; }
+        .leaflet-control-attribution {
+          background: ${isDark ? 'rgba(26,42,34,0.8)' : 'rgba(255,255,255,0.8)'} !important;
+          color: ${isDark ? '#8a9a8a' : '#5a6a5a'} !important;
+          font-size: 9px !important;
+        }
+        .leaflet-control-attribution a { color: ${isDark ? '#5a8a6a' : '#2E7D4F'} !important; }
+        .leaflet-bar a {
+          background: ${isDark ? '#1a2a22' : '#ffffff'} !important;
+          color: ${isDark ? '#f0ead6' : '#1a3a28'} !important;
+          border-color: ${isDark ? '#2a3a32' : '#e0e0e0'} !important;
+        }
+        .leaflet-bar a:hover {
+          background: ${isDark ? '#2a3a32' : '#f0f0f0'} !important;
+        }
+      `}</style>
+
+      {/* Search */}
       <div className="flex gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -437,7 +524,7 @@ export function JobMapView({
             className="h-11 w-full rounded-lg border border-input bg-background py-2 pl-10 pr-3 text-sm outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary"
           />
           {showResults && searchResults.length > 0 && (
-            <div className="absolute z-20 mt-1 w-full overflow-hidden rounded-lg border border-border bg-background shadow-lg animate-fade-in">
+            <div className="absolute z-[1000] mt-1 w-full overflow-hidden rounded-lg border border-border bg-background shadow-lg animate-fade-in">
               {searchResults.map((place) => (
                 <button
                   key={`${place.kind}-${place.label}`}
@@ -453,7 +540,7 @@ export function JobMapView({
         </div>
       </div>
 
-      {/* Yarıçap seçici */}
+      {/* Radius selector */}
       <div className="flex flex-wrap items-center gap-2">
         <Navigation className="h-4 w-4 shrink-0 text-secondary" />
         <span className="text-sm font-semibold text-foreground">{t('jobs.radius')}:</span>
@@ -478,9 +565,9 @@ export function JobMapView({
         </span>
       </div>
 
-      {/* Harita Kartı (Figma) */}
+      {/* Map card */}
       <div className="overflow-hidden rounded-[24px] border border-border bg-card shadow-sm">
-        {/* Kart başlığı */}
+        {/* Header */}
         <div className="flex items-center justify-between gap-3 border-b border-border bg-card px-4 py-3">
           <div className="flex min-w-0 items-center gap-3">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10">
@@ -510,124 +597,21 @@ export function JobMapView({
           </div>
         </div>
 
-        {/* Harita alanı */}
-        <div
-          ref={areaRef}
-          className={cn(
-            'relative h-[320px] w-full cursor-crosshair touch-none select-none overflow-hidden bg-muted/40 sm:h-[420px] lg:h-[500px]',
-            panning && 'cursor-grabbing',
-          )}
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={endDrag}
-          onPointerCancel={endDrag}
-          onPointerLeave={endDrag}
-          onClick={handleMapClick}
-        >
-          <svg
-            className="absolute inset-0 h-full w-full origin-center"
-            viewBox={`0 0 ${TR_MAP_VIEWBOX.width} ${TR_MAP_VIEWBOX.height}`}
-            preserveAspectRatio="xMidYMid meet"
-            style={{
-              transform: `translate(${pan.x}px, ${pan.y}px) scale(${mapScale})`,
-              willChange: 'transform',
-            }}
-          >
-              {/* İller — nötr tema dolgusu, yarıçap içindekiler primary */}
-              {TURKEY_PROVINCES.map((p) => {
-                const inRange = inRangeProvinces.has(p.title);
-                return (
-                  <path
-                    key={p.id}
-                    d={p.d}
-                    className={cn(
-                      'transition-[fill] duration-500 hover:opacity-80',
-                      inRange ? 'fill-primary' : 'fill-secondary-lighter dark:fill-secondary-lighter/60'
-                    )}
-                    stroke="hsl(var(--card))"
-                    strokeWidth="0.9"
-                  />
-                );
-              })}
+        {/* Map area */}
+        <div className="relative">
+          <div
+            ref={containerRef}
+            className="h-[320px] w-full cursor-crosshair sm:h-[420px] lg:h-[500px]"
+            style={{ background: isDark ? '#0d1612' : '#e8edea' }}
+          />
 
-              {/* Yarıçap dairesi */}
-              <ellipse
-                cx={center.x}
-                cy={center.y}
-                rx={radiusX}
-                ry={radiusY}
-                className="fill-primary/10 stroke-primary"
-                strokeWidth="1.2"
-                strokeDasharray="3,2"
-                fillOpacity="0.15"
-              />
-
-              {/* Merkez noktası */}
-              <circle cx={center.x} cy={center.y} r="2.4" className="fill-primary stroke-card" strokeWidth="0.8" />
-              <circle cx={center.x} cy={center.y} r="3.2" className="fill-none stroke-primary" strokeWidth="0.6" opacity="0.5">
-                <animate attributeName="r" from="2.4" to="8" dur="2s" repeatCount="indefinite" />
-                <animate attributeName="opacity" from="0.6" to="0" dur="2s" repeatCount="indefinite" />
-              </circle>
-
-              {/* İş işaretleri */}
-              {jobs.map((job) => {
-                const { x, y } = latLngToMapPixel(job.latitude, job.longitude);
-                const inRange = filteredJobs.some((j) => j.id === job.id);
-                const isSelected = selectedJobId === job.id || popupJob?.id === job.id;
-                const isHovered = hoveredJob === job.id;
-                return (
-                  <g key={job.id}>
-                    <circle
-                      cx={x}
-                      cy={y}
-                      r={isSelected ? 4.4 : isHovered ? 4 : 3.2}
-                      className={cn(
-                        'cursor-pointer transition-all',
-                        inRange
-                          ? 'fill-[#D9A441] stroke-background'
-                          : 'fill-muted-foreground stroke-background',
-                      )}
-                      strokeWidth="1"
-                      strokeOpacity={inRange ? 1 : 0.55}
-                      onMouseEnter={() => setHoveredJob(job.id)}
-                      onMouseLeave={() => setHoveredJob(null)}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (suppressClickRef.current) {
-                          suppressClickRef.current = false;
-                          return;
-                        }
-                        setPopupJob(job);
-                        onJobSelect?.(job);
-                      }}
-                    />
-                    {(isHovered || isSelected) && (
-                      <circle cx={x} cy={y} r="6.5" className="fill-none stroke-[#B8860B]" strokeWidth="0.7" opacity="0.6" />
-                    )}
-                  </g>
-                );
-              })}
-            </svg>
-
-            {/* Pop-up: harita alanına göre konumlanır, zoom + pan hesaba katılır */}
-          {popupJob && fit > 0 && (() => {
-            const f = latLngToMapPixel(popupJob.latitude, popupJob.longitude);
-            const pos = vbToContainer(f.x, f.y);
-            const leftPct = Math.min(Math.max((pos.x / areaSize.width) * 100, 18), 82);
-            const topPct = Math.min(Math.max((pos.y / areaSize.height) * 100, 18), 78);
-            return (
-            <div
-              className="pointer-events-auto absolute z-30 w-56 overflow-hidden rounded-xl border border-border bg-background/95 shadow-xl backdrop-blur animate-fade-in"
-              style={{
-                left: `${leftPct}%`,
-                top: `${topPct}%`,
-                transform: 'translate(-50%, -110%)',
-              }}
-            >
+          {/* Popup */}
+          {popupJob && (
+            <div className="pointer-events-auto absolute left-1/2 top-3 z-[500] w-72 -translate-x-1/2 overflow-hidden rounded-xl border border-border bg-background/95 shadow-xl backdrop-blur animate-fade-in">
               <div className="flex items-start justify-between gap-2 border-b border-border px-3 py-2">
                 <p className="line-clamp-1 text-sm font-bold text-foreground">{popupJob.title}</p>
                 <button
-                  onClick={(e) => { e.stopPropagation(); setPopupJob(null); }}
+                  onClick={() => setPopupJob(null)}
                   className="shrink-0 rounded p-0.5 text-muted-foreground transition-colors hover:text-foreground"
                   aria-label={t('jobs.mapClose')}
                 >
@@ -649,43 +633,42 @@ export function JobMapView({
                 </div>
               </div>
               <div className="flex gap-1.5 px-3 pb-2.5">
-                <Button size="sm" variant="outline" className="h-7 flex-1 text-xs" onClick={(e) => { e.stopPropagation(); onJobSelect?.(popupJob); }}>
+                <Button size="sm" variant="outline" className="h-7 flex-1 text-xs" onClick={() => onJobSelect?.(popupJob)}>
                   <ExternalLink className="mr-1 h-3 w-3" />
                   {t('job.details')}
                 </Button>
                 {onApply && popupJob.status !== 'closed' && (
-                  <Button size="sm" className="h-7 flex-1 text-xs" onClick={(e) => { e.stopPropagation(); onApply(popupJob); }}>
+                  <Button size="sm" className="h-7 flex-1 text-xs" onClick={() => onApply(popupJob)}>
                     {t('job.apply')}
                   </Button>
                 )}
               </div>
             </div>
-            );
-          })()}
+          )}
 
-          {/* Üst sol bilgi çipi */}
-          <div className="absolute left-3 top-3 z-10 hidden max-w-[70%] items-center gap-1.5 rounded-full border border-border bg-card/90 px-3 py-1.5 text-xs font-medium text-foreground shadow-sm backdrop-blur sm:flex">
+          {/* Hint chip */}
+          <div className="pointer-events-none absolute left-3 top-3 z-[500] hidden max-w-[70%] items-center gap-1.5 rounded-full border border-border bg-card/90 px-3 py-1.5 text-xs font-medium text-foreground shadow-sm backdrop-blur sm:flex">
             <MapPin className="h-3.5 w-3.5 shrink-0 text-primary" />
             {t('jobs.clickHint')}
           </div>
 
-          {/* Alt sol lejant (frosted) */}
-          <div className="absolute bottom-3 left-3 z-10 rounded-xl border border-border/60 bg-card/90 px-3 py-2 shadow backdrop-blur">
+          {/* Legend */}
+          <div className="pointer-events-none absolute bottom-3 left-3 z-[500] rounded-xl border border-border/60 bg-card/90 px-3 py-2 shadow backdrop-blur">
             <div className="flex items-center gap-1.5 text-xs">
               <div className="h-2 w-2 rounded-full bg-[#D9A441]" />
               <span className="text-muted-foreground">{t('jobs.inRange')}</span>
             </div>
             <div className="mt-1 flex items-center gap-1.5 text-xs">
-              <div className="h-2 w-2 rounded-full bg-secondary-lighter" />
+              <div className={cn('h-2 w-2 rounded-full', isDark ? 'bg-gray-500' : 'bg-gray-400')} />
               <span className="text-muted-foreground">{t('jobs.outOfRange')}</span>
             </div>
           </div>
 
-          {/* Mobil yüzen kontroller — başlık çubuğu kontrolleri sm+ ekranlarda görünür */}
-          <div className="absolute bottom-3 right-3 z-20 flex flex-col items-center gap-1 rounded-2xl border border-border bg-card/95 p-1 shadow-lg backdrop-blur sm:hidden">
+          {/* Mobile floating controls */}
+          <div className="absolute bottom-3 right-3 z-[500] flex flex-col items-center gap-1 rounded-2xl border border-border bg-card/95 p-1 shadow-lg backdrop-blur sm:hidden">
             <button
               type="button"
-              onClick={(e) => { e.stopPropagation(); handleLocate(); }}
+              onClick={handleLocate}
               disabled={locating}
               aria-label={t('jobs.mapLocate')}
               className="flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-primary disabled:opacity-60"
@@ -694,25 +677,23 @@ export function JobMapView({
             </button>
             <button
               type="button"
-              onClick={(e) => { e.stopPropagation(); zoomIn(); }}
-              disabled={zoom >= MAX_ZOOM}
+              onClick={zoomIn}
               aria-label={t('jobs.mapZoomIn')}
-              className="flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-primary disabled:opacity-40"
+              className="flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-primary"
             >
               <Plus className="h-5 w-5" />
             </button>
             <button
               type="button"
-              onClick={(e) => { e.stopPropagation(); zoomOut(); }}
-              disabled={zoom <= MIN_ZOOM}
+              onClick={zoomOut}
               aria-label={t('jobs.mapZoomOut')}
-              className="flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-primary disabled:opacity-40"
+              className="flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-primary"
             >
               <Minus className="h-5 w-5" />
             </button>
             <button
               type="button"
-              onClick={(e) => { e.stopPropagation(); resetView(); }}
+              onClick={resetView}
               aria-label={t('jobs.mapReset')}
               className="flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-primary"
             >
@@ -721,6 +702,93 @@ export function JobMapView({
           </div>
         </div>
       </div>
+
+      {geoError && <p className="text-xs text-destructive">{geoError}</p>}
     </div>
   );
 }
+
+// Province centroids for radius-based highlighting (moved from turkey-map-data.ts)
+const PROVINCE_CENTROIDS: Record<string, { lat: number; lng: number }> = {
+  'Adana': { lat: 37.4146, lng: 35.6184 },
+  'Adıyaman': { lat: 37.8055, lng: 38.304 },
+  'Afyonkarahisar': { lat: 38.6496, lng: 30.6716 },
+  'Ağrı': { lat: 39.5516, lng: 43.2482 },
+  'Aksaray': { lat: 38.4255, lng: 33.8585 },
+  'Amasya': { lat: 40.7099, lng: 35.7201 },
+  'Ankara': { lat: 39.7999, lng: 32.5981 },
+  'Antalya': { lat: 36.8231, lng: 30.9481 },
+  'Ardahan': { lat: 41.1158, lng: 42.8237 },
+  'Artvin': { lat: 41.1193, lng: 41.826 },
+  'Aydın': { lat: 37.7353, lng: 28.0316 },
+  'Balıkesir': { lat: 39.6533, lng: 27.9188 },
+  'Bartın': { lat: 41.5768, lng: 32.524 },
+  'Batman': { lat: 37.9816, lng: 41.3448 },
+  'Bayburt': { lat: 40.2472, lng: 40.2233 },
+  'Bilecik': { lat: 40.0997, lng: 30.1194 },
+  'Bingöl': { lat: 39.0479, lng: 40.6439 },
+  'Bitlis': { lat: 38.5265, lng: 42.3747 },
+  'Bolu': { lat: 40.6306, lng: 31.6423 },
+  'Burdur': { lat: 37.4231, lng: 30.0862 },
+  'Bursa': { lat: 40.1168, lng: 29.0455 },
+  'Çanakkale': { lat: 39.9577, lng: 26.6974 },
+  'Çankırı': { lat: 40.7319, lng: 33.363 },
+  'Çorum': { lat: 40.562, lng: 34.6934 },
+  'Denizli': { lat: 37.7406, lng: 29.293 },
+  'Diyarbakır': { lat: 38.1063, lng: 40.3454 },
+  'Düzce': { lat: 40.8867, lng: 31.1305 },
+  'Edirne': { lat: 41.2506, lng: 26.6028 },
+  'Elazığ': { lat: 38.6597, lng: 39.4025 },
+  'Erzincan': { lat: 39.6682, lng: 39.2924 },
+  'Erzurum': { lat: 40.063, lng: 41.5507 },
+  'Eskişehir': { lat: 39.6018, lng: 31.0918 },
+  'Gaziantep': { lat: 37.0936, lng: 37.3669 },
+  'Giresun': { lat: 40.5809, lng: 38.5788 },
+  'Gümüşhane': { lat: 40.3326, lng: 39.4168 },
+  'Hakkâri': { lat: 37.4631, lng: 44.0558 },
+  'Hatay': { lat: 36.4513, lng: 36.2585 },
+  'Mersin': { lat: 36.6938, lng: 33.8597 },
+  'Iğdır': { lat: 39.8933, lng: 43.9841 },
+  'Isparta': { lat: 37.95, lng: 30.9567 },
+  'Istanbul': { lat: 41.147, lng: 28.8357 },
+  'İzmir': { lat: 38.478, lng: 27.2954 },
+  'Kahramanmaraş': { lat: 37.8928, lng: 36.965 },
+  'Karabük': { lat: 41.2724, lng: 32.6706 },
+  'Karaman': { lat: 37.0159, lng: 33.0883 },
+  'Kars': { lat: 40.436, lng: 43.0576 },
+  'Kastamonu': { lat: 41.4875, lng: 33.7048 },
+  'Kayseri': { lat: 38.6166, lng: 35.8628 },
+  'Kilis': { lat: 36.7954, lng: 37.1576 },
+  'Kırıkkale': { lat: 39.8687, lng: 33.7134 },
+  'Kırklareli': { lat: 41.6735, lng: 27.4457 },
+  'Kırşehir': { lat: 39.3234, lng: 34.1284 },
+  'Kocaeli': { lat: 40.8408, lng: 29.8931 },
+  'Konya': { lat: 38.0184, lng: 32.6966 },
+  'Kütahya': { lat: 39.2998, lng: 29.5866 },
+  'Malatya': { lat: 38.5263, lng: 38.1191 },
+  'Manisa': { lat: 38.7586, lng: 28.1309 },
+  'Mardin': { lat: 37.3352, lng: 40.8217 },
+  'Muğla': { lat: 37.0052, lng: 28.4916 },
+  'Muş': { lat: 38.9966, lng: 41.8452 },
+  'Nevşehir': { lat: 38.8169, lng: 34.7466 },
+  'Niğde': { lat: 37.9333, lng: 34.7122 },
+  'Ordu': { lat: 40.7907, lng: 37.4956 },
+  'Osmaniye': { lat: 37.2649, lng: 36.3144 },
+  'Rize': { lat: 40.9261, lng: 40.8673 },
+  'Sakarya': { lat: 40.7423, lng: 30.5069 },
+  'Samsun': { lat: 41.2101, lng: 36.017 },
+  'Şanlıurfa': { lat: 37.2489, lng: 39.1037 },
+  'Siirt': { lat: 37.9047, lng: 42.0723 },
+  'Sinop': { lat: 41.6168, lng: 34.8867 },
+  'Şırnak': { lat: 37.4558, lng: 42.4875 },
+  'Sivas': { lat: 39.5645, lng: 37.296 },
+  'Tekirdağ': { lat: 41.0758, lng: 27.3807 },
+  'Tokat': { lat: 40.3649, lng: 36.5745 },
+  'Trabzon': { lat: 40.7951, lng: 39.8288 },
+  'Tunceli': { lat: 39.198, lng: 39.4744 },
+  'Uşak': { lat: 38.576, lng: 29.3648 },
+  'Van': { lat: 38.4683, lng: 43.5843 },
+  'Yalova': { lat: 40.5838, lng: 29.1452 },
+  'Yozgat': { lat: 39.6641, lng: 35.2681 },
+  'Zonguldak': { lat: 41.2617, lng: 31.8437 },
+};
