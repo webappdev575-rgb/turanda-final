@@ -103,6 +103,8 @@ export function JobMapView({
   const suppressMouseUpRef = useRef(false);
   const selectedRadiusRef = useRef(selectedRadius);
   selectedRadiusRef.current = selectedRadius;
+  const stylesRef = useRef(themeStyles(isDark));
+  const hoveredProvinceRef = useRef<string | null>(null);
 
   // ---- Derived data ----
   const filteredJobs = useMemo(() => {
@@ -167,9 +169,6 @@ export function JobMapView({
           style: () => ({ ...s.province }),
           onEachFeature: (feature, layer) => {
             const name = feature.properties?.name ?? '';
-            const baseStyle = { ...s.province };
-            const hoverStyle = { ...s.provinceHover };
-            const inRangeStyle = { ...s.provinceInRange };
 
             layer.bindTooltip(name, {
               sticky: true,
@@ -181,12 +180,16 @@ export function JobMapView({
             const layerPath = layer as L.Path;
             layer.on({
               mouseover: () => {
+                hoveredProvinceRef.current = name;
+                const st = stylesRef.current;
                 const inRange = inRangeProvincesRef.current.has(name);
-                layerPath.setStyle(inRange ? { ...hoverStyle, fillColor: s.provinceInRange.fillColor } : hoverStyle);
+                layerPath.setStyle(inRange ? { ...st.provinceHover, fillColor: st.provinceInRange.fillColor } : { ...st.provinceHover });
               },
               mouseout: () => {
+                hoveredProvinceRef.current = null;
+                const st = stylesRef.current;
                 const inRange = inRangeProvincesRef.current.has(name);
-                layerPath.setStyle(inRange ? inRangeStyle : baseStyle);
+                layerPath.setStyle(inRange ? { ...st.provinceInRange } : { ...st.province });
               },
               click: () => {
                 // Close the tooltip so the province name box doesn't linger
@@ -297,11 +300,17 @@ export function JobMapView({
     if (!map) return;
 
     const s = themeStyles(isDark);
+    stylesRef.current = s;
     for (const layer of provinceLayersRef.current) {
       const pathLayer = layer as L.Path;
       const name = (pathLayer as L.Path & { feature?: { properties?: { name?: string } } }).feature?.properties?.name ?? '';
       const inRange = inRangeProvincesRef.current.has(name);
-      pathLayer.setStyle(inRange ? { ...s.provinceInRange } : { ...s.province });
+      const isHovered = hoveredProvinceRef.current === name;
+      if (isHovered) {
+        pathLayer.setStyle(inRange ? { ...s.provinceHover, fillColor: s.provinceInRange.fillColor } : { ...s.provinceHover });
+      } else {
+        pathLayer.setStyle(inRange ? { ...s.provinceInRange } : { ...s.province });
+      }
       // Keep provinces below job markers after restyle
       pathLayer.bringToBack();
     }
@@ -327,11 +336,21 @@ export function JobMapView({
       const pathLayer = layer as L.Path;
       const name = (pathLayer as L.Path & { feature?: { properties?: { name?: string } } }).feature?.properties?.name ?? '';
       const inRange = inRangeProvinces.has(name);
-      pathLayer.setStyle(inRange ? { ...s.provinceInRange } : { ...s.province });
+      const isHovered = hoveredProvinceRef.current === name;
+      if (isHovered) {
+        pathLayer.setStyle(inRange ? { ...s.provinceHover, fillColor: s.provinceInRange.fillColor } : { ...s.provinceHover });
+      } else {
+        pathLayer.setStyle(inRange ? { ...s.provinceInRange } : { ...s.province });
+      }
       pathLayer.bringToBack();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inRangeProvinces]);
+
+  // Keep stylesRef in sync so hover handlers always use current theme
+  useEffect(() => {
+    stylesRef.current = themeStyles(isDark);
+  }, [isDark]);
 
   // ---- Draw / move the radius circle + center marker ----
   useEffect(() => {
