@@ -99,6 +99,8 @@ export function JobMapView({
   const jobMarkersRef = useRef<Map<string, L.CircleMarker>>(new Map());
   const provinceLayersRef = useRef<L.Layer[]>([]);
   const provinceLabelsRef = useRef<L.LayerGroup | null>(null);
+  const labelMarkersRef = useRef<Map<string, L.Marker>>(new Map());
+  const selectedProvinceRef = useRef<string | null>(null);
   const inRangeProvincesRef = useRef<Set<string>>(new Set());
   const suppressMouseUpRef = useRef(false);
   const selectedRadiusRef = useRef(selectedRadius);
@@ -184,12 +186,18 @@ export function JobMapView({
                 const st = stylesRef.current;
                 const inRange = inRangeProvincesRef.current.has(name);
                 layerPath.setStyle(inRange ? { ...st.provinceHover, fillColor: st.provinceInRange.fillColor } : { ...st.provinceHover });
+                const lm = labelMarkersRef.current.get(name);
+                if (lm) lm.setOpacity(1);
               },
               mouseout: () => {
                 hoveredProvinceRef.current = null;
                 const st = stylesRef.current;
                 const inRange = inRangeProvincesRef.current.has(name);
                 layerPath.setStyle(inRange ? { ...st.provinceInRange } : { ...st.province });
+                if (selectedProvinceRef.current !== name) {
+                  const lm = labelMarkersRef.current.get(name);
+                  if (lm) lm.setOpacity(0);
+                }
               },
               mousedown: () => {
                 suppressMouseUpRef.current = true;
@@ -197,6 +205,13 @@ export function JobMapView({
               click: (e: L.LeafletMouseEvent) => {
                 L.DomEvent.stopPropagation(e);
                 layer.closeTooltip();
+                // Hide previous selection's label
+                const prev = selectedProvinceRef.current;
+                if (prev && prev !== name) {
+                  const prevLabel = labelMarkersRef.current.get(prev);
+                  if (prevLabel && hoveredProvinceRef.current !== prev) prevLabel.setOpacity(0);
+                }
+                selectedProvinceRef.current = name;
                 const centroid = PROVINCE_CENTROIDS[name];
                 if (centroid) {
                   const next = keepRadiusInsideMap(centroid.lat, centroid.lng);
@@ -211,10 +226,10 @@ export function JobMapView({
           },
         }).addTo(map);
         geoJsonRef.current = geo;
-        // Add persistent, high-contrast province labels inside Türkiye.
+        // Add province labels — hidden by default, shown on hover/select.
         const labels = L.layerGroup([], { pane: 'provinceLabelPane' }).addTo(map);
         for (const [name, coords] of Object.entries(PROVINCE_CENTROIDS)) {
-          L.marker([coords.lat, coords.lng], {
+          const marker = L.marker([coords.lat, coords.lng], {
             pane: 'provinceLabelPane',
             interactive: false,
             icon: L.divIcon({
@@ -223,7 +238,10 @@ export function JobMapView({
               iconSize: [100, 20],
               iconAnchor: [50, 10],
             }),
-          }).addTo(labels);
+          });
+          marker.setOpacity(0);
+          marker.addTo(labels);
+          labelMarkersRef.current.set(name, marker);
         }
         provinceLabelsRef.current = labels;
         map.fitBounds(geo.getBounds(), { padding: [20, 20] });
@@ -291,6 +309,16 @@ export function JobMapView({
       repositionFromMapPoint(e.latlng.lat, e.latlng.lng);
     });
 
+    // Clicking empty map area clears the selected province label
+    map.on('click', () => {
+      const prev = selectedProvinceRef.current;
+      if (prev) {
+        const prevLabel = labelMarkersRef.current.get(prev);
+        if (prevLabel && hoveredProvinceRef.current !== prev) prevLabel.setOpacity(0);
+        selectedProvinceRef.current = null;
+      }
+    });
+
     return () => {
       map.remove();
       mapRef.current = null;
@@ -298,8 +326,10 @@ export function JobMapView({
       radiusCircleRef.current = null;
       centerMarkerRef.current = null;
       provinceLabelsRef.current = null;
+      labelMarkersRef.current.clear();
       jobMarkersRef.current.clear();
       provinceLayersRef.current = [];
+      selectedProvinceRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -589,6 +619,7 @@ export function JobMapView({
           display: block !important;
           width: 100px !important;
           height: 20px !important;
+          transition: opacity 180ms ease-out !important;
         }
         .leaflet-container { font-family: inherit !important; }
         .leaflet-control-attribution {
