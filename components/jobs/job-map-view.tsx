@@ -207,8 +207,8 @@ export function JobMapView({
             icon: L.divIcon({
               className: 'tr-province-label',
               html: `<span>${name}</span>`,
-              iconSize: [0, 0],
-              iconAnchor: [0, 0],
+              iconSize: [100, 20],
+              iconAnchor: [50, 10],
             }),
           }).addTo(labels);
         }
@@ -557,7 +557,9 @@ export function JobMapView({
           text-shadow: -1px -1px 0 ${isDark ? '#102d20' : '#fff'}, 1px -1px 0 ${isDark ? '#102d20' : '#fff'}, -1px 1px 0 ${isDark ? '#102d20' : '#fff'}, 1px 1px 0 ${isDark ? '#102d20' : '#fff'} !important;
           white-space: nowrap !important;
           pointer-events: none !important;
-          transform: translate(-50%, -50%) !important;
+          display: block !important;
+          width: 100px !important;
+          height: 20px !important;
         }
         .leaflet-container { font-family: inherit !important; }
         .leaflet-control-attribution {
