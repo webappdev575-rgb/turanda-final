@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Loader2, Save, Check, ArrowUp, ArrowDown, Plus, Trash2, Sprout } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Loader2, Save, Check, ArrowUp, ArrowDown, Plus, Trash2, Sprout, Upload, Video, X } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -43,6 +43,9 @@ export function CropDevelopmentAdmin() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [uploadingKey, setUploadingKey] = useState<string | null>(null);
+  const imageInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const videoInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   useEffect(() => {
     Promise.all([
@@ -107,6 +110,28 @@ export function CropDevelopmentAdmin() {
   const deleteCard = async (id: string) => {
     await supabase.from('crop_cards').delete().eq('id', id);
     setCards((prev) => prev.filter((c) => c.id !== id));
+  };
+
+  const uploadMedia = async (cardId: string, kind: 'image' | 'video', file: File) => {
+    const key = `${cardId}-${kind}`;
+    setUploadingKey(key);
+    const ext = file.name.split('.').pop()?.toLowerCase() || (kind === 'image' ? 'png' : 'mp4');
+    const path = `${kind}/${cardId}-${Date.now()}.${ext}`;
+    const contentType = kind === 'image'
+      ? (file.type || 'image/png')
+      : (file.type || 'video/mp4');
+    const { error } = await supabase.storage
+      .from('crop-media')
+      .upload(path, file, { contentType, upsert: true });
+    setUploadingKey(null);
+    if (error) {
+      console.error('Upload failed', error.message);
+      return;
+    }
+    const { data: pub } = supabase.storage.from('crop-media').getPublicUrl(path);
+    if (pub?.publicUrl) {
+      updateCard(cardId, kind === 'image' ? 'image_url' : 'video_url', pub.publicUrl);
+    }
   };
 
   const handleSave = async () => {
@@ -272,23 +297,94 @@ export function CropDevelopmentAdmin() {
                 ))}
               </div>
 
-              {/* Image + video URLs */}
+              {/* Image + video URLs with upload */}
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Cover Image URL</Label>
+                  <Label className="text-xs">Cover Image</Label>
                   <Input
                     value={card.image_url}
                     onChange={(e) => updateCard(card.id, 'image_url', e.target.value)}
-                    placeholder="https://..."
+                    placeholder="https://... or upload below"
                   />
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={uploadingKey === `${card.id}-image`}
+                      onClick={() => imageInputRefs.current[card.id]?.click()}
+                    >
+                      {uploadingKey === `${card.id}-image`
+                        ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                        : <Upload className="mr-1.5 h-3.5 w-3.5" />}
+                      Upload Image
+                    </Button>
+                    {card.image_url && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => updateCard(card.id, 'image_url', '')}
+                      >
+                        <X className="mr-1 h-3.5 w-3.5" /> Clear
+                      </Button>
+                    )}
+                    <input
+                      ref={(el) => { imageInputRefs.current[card.id] = el; }}
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp,image/gif"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) uploadMedia(card.id, 'image', f);
+                        e.target.value = '';
+                      }}
+                      className="hidden"
+                    />
+                  </div>
                 </div>
+
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Hover Video URL</Label>
+                  <Label className="text-xs">Hover Video</Label>
                   <Input
                     value={card.video_url}
                     onChange={(e) => updateCard(card.id, 'video_url', e.target.value)}
-                    placeholder="https://...mp4"
+                    placeholder="https://...mp4 or upload below"
                   />
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={uploadingKey === `${card.id}-video`}
+                      onClick={() => videoInputRefs.current[card.id]?.click()}
+                    >
+                      {uploadingKey === `${card.id}-video`
+                        ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                        : <Video className="mr-1.5 h-3.5 w-3.5" />}
+                      Upload Video
+                    </Button>
+                    {card.video_url && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => updateCard(card.id, 'video_url', '')}
+                      >
+                        <X className="mr-1 h-3.5 w-3.5" /> Clear
+                      </Button>
+                    )}
+                    <input
+                      ref={(el) => { videoInputRefs.current[card.id] = el; }}
+                      type="file"
+                      accept="video/mp4,video/webm,video/ogg"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) uploadMedia(card.id, 'video', f);
+                        e.target.value = '';
+                      }}
+                      className="hidden"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -298,6 +394,17 @@ export function CropDevelopmentAdmin() {
                   <img
                     src={card.image_url}
                     alt="Preview"
+                    className={cn('h-24 w-full object-cover', !card.is_visible && 'opacity-40')}
+                  />
+                </div>
+              )}
+              {card.video_url && (
+                <div className="overflow-hidden rounded-lg border border-border">
+                  <video
+                    src={card.video_url}
+                    muted
+                    loop
+                    controls
                     className={cn('h-24 w-full object-cover', !card.is_visible && 'opacity-40')}
                   />
                 </div>
