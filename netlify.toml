@@ -2,5 +2,11 @@
 command = "npx next build"
 publish = ".next"
 
+# GOOGLE_CLIENT_SECRET is never read by the app (Google OAuth is handled by
+# Supabase Auth), so Next.js cannot inline it. Its value only matches unrelated
+# strings in the compiled chunks, which trips secrets scanning.
+[build.environment]
+SECRETS_SCAN_OMIT_KEYS = "GOOGLE_CLIENT_SECRET"
+
 [[plugins]]
 package = "@netlify/plugin-nextjs"
