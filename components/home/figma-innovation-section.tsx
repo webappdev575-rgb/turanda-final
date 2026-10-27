@@ -26,7 +26,7 @@ const themeContent: Record<
     support1: 'red.themeAutomatedSupport1',
     support2: 'red.themeAutomatedSupport2',
     image:
-      'https://images.pexels.com/photos/38261515/pexels-photo-38261515.jpeg?auto=compress&cs=tinysrgb&h=650&w=940',
+      'https://images.pexels.com/photos/7338898/pexels-photo-7338898.jpeg?auto=compress&cs=tinysrgb&h=650&w=940',
     alt: 'Turkish bazaar vendor with fresh vegetables',
   },
   biomedical: {
