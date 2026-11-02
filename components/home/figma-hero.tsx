@@ -15,9 +15,6 @@ import { useStats } from '@/hooks/use-stats';
 import { useI18n } from '@/components/i18n-provider';
 import type { TranslationKey } from '@/lib/i18n';
 
-const HERO_VIDEO =
-  'https://videos.pexels.com/video-files/1620050/1620050-hd_1920_1080_25fps.mp4';
-
 const HERO_IMAGE =
   'https://images.pexels.com/photos/9276463/pexels-photo-9276463.jpeg?auto=compress&cs=tinysrgb&w=1600';
 
@@ -236,15 +233,9 @@ export function FigmaHero() {
       <div className="relative z-10 mt-10 w-full lg:mt-12">
         <div className="overflow-hidden rounded-none bg-[#fffdf6] dark:bg-[#0b1611]">
           <figure className="relative h-[380px] w-full overflow-hidden sm:h-[420px] lg:h-[490px]">
-            <video
-              className="hero-video"
-              src={HERO_VIDEO}
-              autoPlay
-              muted
-              loop
-              playsInline
-              preload="auto"
-              poster={HERO_IMAGE}
+            <div
+              className="absolute inset-0 bg-cover bg-center"
+              style={{ backgroundImage: `url(${HERO_IMAGE})` }}
               aria-hidden="true"
             />
             <div className="absolute inset-x-0 top-0 h-48 bg-[linear-gradient(180deg,#fffdf6_0%,#fffdf6_35%,rgba(255,253,246,0)_100%)] dark:bg-[linear-gradient(180deg,#0b1611_0%,#0b1611_35%,rgba(11,22,17,0)_100%)]" />

@@ -329,14 +329,6 @@
   animation: hero-slide-in 0.6s ease-out forwards;
 }
 
-.hero-video {
-  position: absolute;
-  inset: 0;
-  height: 100%;
-  width: 100%;
-  object-fit: cover;
-}
-
 /* Organic contour divider — soft terraced wave between sections */
 .contour-divider {
   display: block;
