@@ -111,9 +111,9 @@ export function FigmaHero() {
       {/* Wind-drifting dandelions, petals and specks across the dark header area */}
       <HeroFloatLayer />
       {/* Heading — badge removed, moved up */}
-      <header className="relative z-10 mx-auto flex w-full max-w-[1024px] flex-col items-center px-4 pt-8 sm:px-8 lg:px-0 lg:pt-10">
+      <header className="relative z-10 mx-auto flex w-full max-w-[1024px] flex-col items-center px-4 pt-6 sm:px-8 lg:px-0 lg:pt-8">
         <div className="flex w-full flex-col items-center">
-          <h1 className="w-full max-w-[720px] text-center text-[clamp(1.75rem,3vw,2.75rem)] font-semibold leading-[1.08] tracking-[0.015em] text-[#15231d] dark:text-[#f5f3eb]">
+          <h1 className="w-full max-w-[720px] text-center text-[clamp(1.75rem,3vw,2.75rem)] font-medium leading-[1.08] tracking-[0.015em] text-[#15231d] dark:text-[#f5f3eb]">
             {t('red.heroTitle')}
           </h1>
         </div>
@@ -121,7 +121,7 @@ export function FigmaHero() {
           {heroPhrases.map((phrase, i) => (
             <p
               key={phrase}
-              className="absolute inset-0 flex items-center justify-center text-sm font-semibold tracking-wide text-field transition-opacity duration-700 ease-in-out dark:text-[#c9e7b8]"
+              className="absolute inset-0 flex items-center justify-center text-sm font-medium tracking-wide text-field transition-opacity duration-700 ease-in-out dark:text-[#c9e7b8]"
               style={{ opacity: i === phraseIndex ? 1 : 0 }}
               aria-hidden={i !== phraseIndex}
             >
@@ -129,7 +129,7 @@ export function FigmaHero() {
             </p>
           ))}
         </div>
-        <p className="w-full max-w-[576px] pt-3 text-center text-base leading-6 text-[#617069] dark:text-[#ffffff99] md:pt-4">
+        <p className="w-full max-w-[576px] pt-2 text-center text-base font-medium leading-6 text-[#617069] dark:text-[#ffffff99] md:pt-3">
           {t('red.heroSubtitle')}
         </p>
 
@@ -139,21 +139,21 @@ export function FigmaHero() {
             e.preventDefault();
             handleSearch();
           }}
-          className="mt-6 flex w-full max-w-4xl flex-col gap-2 rounded-2xl border border-[#15231d1a] bg-cream/95 p-2 shadow-[0px_25px_50px_-12px_#00000026] dark:border-[#ffffff14] sm:flex-row sm:items-center"
+          className="mt-5 flex w-full max-w-4xl flex-col gap-1.5 rounded-2xl border border-[#15231d1a] bg-cream/95 p-1.5 shadow-[0px_25px_50px_-12px_#00000026] dark:border-[#ffffff14] sm:flex-row sm:items-center"
         >
-          <div className="relative flex min-h-12 flex-[1.5] items-center rounded-xl border border-[#15231d1a] bg-cream shadow-[0px_1px_2px_-1px_#0000001a,0px_1px_3px_#0000001a] dark:border-[#ffffff14]">
+          <div className="relative flex min-h-11 flex-[1.5] items-center rounded-xl border border-[#15231d1a] bg-cream shadow-[0px_1px_2px_-1px_#0000001a,0px_1px_3px_#0000001a] dark:border-[#ffffff14]">
             <Search aria-hidden="true" className="pointer-events-none absolute left-4 z-10 h-[18px] w-[18px] shrink-0 text-ink-faint" />
             <PredictiveSearch
               jobs={jobs}
               onSearchNavigate={handlePredictiveNavigate}
               placeholder={t('hero.searchPlaceholder') as string}
-              inputClassName="h-12 rounded-xl border-0 bg-transparent pl-11 pr-3 focus:border-0 focus:ring-0"
+              inputClassName="h-11 rounded-xl border-0 bg-transparent pl-11 pr-3 font-medium focus:border-0 focus:ring-0"
               className="flex-1"
             />
           </div>
           <div
             ref={cityRef}
-            className="relative flex min-h-12 flex-1 items-center gap-2 rounded-xl border border-[#15231d1a] bg-cream px-4 shadow-[0px_1px_2px_-1px_#0000001a,0px_1px_3px_#0000001a] dark:border-[#ffffff14]"
+            className="relative flex min-h-11 flex-1 items-center gap-2 rounded-xl border border-[#15231d1a] bg-cream px-4 font-medium shadow-[0px_1px_2px_-1px_#0000001a,0px_1px_3px_#0000001a] dark:border-[#ffffff14]"
           >
             <MapPin aria-hidden="true" className="h-[18px] w-[18px] shrink-0 text-ink-faint" />
             <span className="sr-only">{t('hero.locationPlaceholder')}</span>
@@ -168,7 +168,7 @@ export function FigmaHero() {
                 if (e.key === 'Escape') setCityOpen(false);
               }}
               placeholder={t('hero.locationPlaceholder') as string}
-              className="h-12 w-full min-w-0 bg-transparent text-sm text-ink outline-none placeholder:text-ink-faint"
+              className="h-11 w-full min-w-0 bg-transparent text-sm font-medium text-ink outline-none placeholder:text-ink-faint"
             />
             <LocateMeButton
               onLocate={(city) => {
@@ -205,20 +205,20 @@ export function FigmaHero() {
           </div>
           <Button
             type="submit"
-            className="gold-trail-btn h-12 shrink-0 gap-2 rounded-xl bg-[#08271d] px-6 text-sm font-semibold text-white shadow-[0px_1px_2px_-1px_#0000001a,0px_1px_3px_#0000001a] hover:bg-[#123d2e] dark:bg-brand dark:hover:bg-brand-hover"
+            className="gold-trail-btn h-11 shrink-0 gap-2 rounded-xl bg-[#08271d] px-6 text-sm font-medium text-white shadow-[0px_1px_2px_-1px_#0000001a,0px_1px_3px_#0000001a] hover:bg-[#123d2e] dark:bg-brand dark:hover:bg-brand-hover"
           >
             {t('hero.searchButton')}
             <ArrowUpRight aria-hidden="true" className="h-[18px] w-[18px]" />
           </Button>
         </form>
 
-        <div className="flex min-h-[42px] w-full max-w-[896px] flex-wrap items-center justify-center gap-2 pt-3">
-          <span className="text-xs text-[#96a09a]">{t('hero.popular')}</span>
+        <div className="flex min-h-[38px] w-full max-w-[896px] flex-wrap items-center justify-center gap-2 pt-2">
+          <span className="text-xs font-medium text-[#96a09a]">{t('hero.popular')}</span>
           {pills.map((pill) => (
             <button
               key={pill}
               onClick={() => handlePillClick(t(pill) as string)}
-              className="rounded-full border border-[#15231d26] bg-transparent px-3 py-1.5 text-xs text-[#617069] transition-colors hover:border-[#c88a3566] hover:bg-[#c88a3526] hover:text-[#15231d] dark:border-[#ffffff26] dark:text-[#ffffff99] dark:hover:text-white"
+              className="rounded-full border border-[#15231d26] bg-transparent px-3 py-1 font-medium text-xs text-[#617069] transition-colors hover:border-[#c88a3566] hover:bg-[#c88a3526] hover:text-[#15231d] dark:border-[#ffffff26] dark:text-[#ffffff99] dark:hover:text-white"
             >
               {t(pill)}
             </button>
