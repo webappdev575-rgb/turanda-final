@@ -53,16 +53,16 @@ export function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-[#15231d0f] bg-[#fffdf6f2] backdrop-blur-xl dark:border-[#ffffff14] dark:bg-[#0d1a13e6]">
-      <div className="grid min-h-20 w-full grid-cols-[1fr_auto_1fr] items-center gap-3 px-4 sm:px-6 lg:min-h-40">
+      <div className="grid min-h-20 w-full grid-cols-[1fr_auto_1fr] items-center gap-3 px-4 sm:px-6 lg:min-h-28">
         <Link href="/" className="inline-flex shrink-0 items-center gap-3 justify-self-start rounded-lg">
-          <span className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl lg:h-36 lg:w-36">
-            <Image src="/images/logos/logo-mark.png" alt="Turanda Tarım" fill sizes="144px" className="object-contain dark:hidden" />
-            <Image src="/images/logos/turanda_dark_mode_logo.png" alt="" aria-hidden="true" fill sizes="144px" className="hidden object-contain dark:block" />
+          <span className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl lg:h-24 lg:w-24">
+            <Image src="/images/logos/logo-mark.png" alt="Turanda Tarım" fill sizes="96px" className="object-contain dark:hidden" />
+            <Image src="/images/logos/turanda_dark_mode_logo.png" alt="" aria-hidden="true" fill sizes="96px" className="hidden object-contain dark:block" />
           </span>
           <span className="hidden shrink-0 sm:flex">
             <span aria-hidden="true" className="flex flex-col items-center justify-center leading-none">
-              <span className="text-[17px] font-extrabold uppercase tracking-[0.02em] text-[#15231d] dark:text-white lg:text-[51px] lg:leading-[0.9]">Turanda</span>
-              <span className="mt-[3px] text-[10px] font-bold uppercase tracking-[0.55em] text-[#c9962e] lg:mt-1 lg:text-[30px] lg:tracking-[0.45em]">Tarim</span>
+              <span className="text-[17px] font-extrabold uppercase tracking-[0.02em] text-[#15231d] dark:text-white lg:text-[34px] lg:leading-[0.9]">Turanda</span>
+              <span className="mt-[3px] text-[10px] font-bold uppercase tracking-[0.55em] text-[#c9962e] lg:mt-1 lg:text-[20px] lg:tracking-[0.45em]">Tarim</span>
             </span>
           </span>
         </Link>
