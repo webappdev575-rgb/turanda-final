@@ -83,26 +83,10 @@ function AkademiPageContent() {
       <div className="relative overflow-hidden rounded-[32px] ring-1 ring-[#15231d1a] shadow-[0px_25px_50px_-12px_#00000026] dark:ring-[#ffffff14]">
         <div className="relative h-[320px] w-full overflow-hidden sm:h-[380px] lg:h-[420px]">
           <img
-            src="https://images.pexels.com/photos/5555232/pexels-photo-5555232.jpeg?auto=compress&cs=tinysrgb&w=1600"
-            alt=""
-            aria-hidden="true"
+            src="/images/turanda_academy_header.png"
+            alt="Turanda Tarım Akademisi"
             className="absolute inset-0 h-full w-full object-cover"
           />
-          <div
-            aria-hidden="true"
-            className="absolute inset-0 bg-[linear-gradient(0deg,rgba(8,39,29,0.92)_0%,rgba(8,39,29,0.35)_55%,rgba(8,39,29,0)_100%)] dark:bg-[linear-gradient(0deg,rgba(3,15,10,0.95)_0%,rgba(3,15,10,0.45)_55%,rgba(3,15,10,0)_100%)]"
-          />
-          <div className="relative z-10 flex h-full w-full flex-col justify-end p-6 sm:p-10 lg:p-12">
-            <Badge variant="outline" className="mb-3 w-fit border-white/40 bg-white/10 text-white backdrop-blur-[4px]">
-              {t('akademi.badgeLabel') as string}
-            </Badge>
-            <h1 className="text-balance max-w-2xl text-4xl font-semibold leading-[0.98] tracking-[-0.02em] text-white sm:text-5xl sm:leading-[1.05]">
-              {t('akademi.homeTitle') as string}
-            </h1>
-            <p className="text-balance mt-3 max-w-xl text-base leading-6 text-white/80 sm:text-lg sm:leading-7">
-              {t('akademi.homeDesc') as string}
-            </p>
-          </div>
         </div>
       </div>
 
