@@ -132,6 +132,9 @@ export function FigmaHero() {
         <p className="w-full max-w-[576px] pt-2 text-center text-base font-medium leading-6 text-[#617069] dark:text-[#ffffff99] md:pt-3">
           {t('red.heroSubtitle')}
         </p>
+        <p className="w-full max-w-[576px] pt-2 text-center text-sm font-medium leading-5 text-[#617069] dark:text-[#ffffff99] md:pt-3">
+          {t('red.heroSalaryInfo')}
+        </p>
 
         {/* Preserved search bar — keyword + location with suggestions + golden-trail search button */}
         <form
