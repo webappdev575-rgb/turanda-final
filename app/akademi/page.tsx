@@ -81,7 +81,7 @@ function AkademiPageContent() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
       <div className="relative overflow-hidden rounded-[32px] ring-1 ring-[#15231d1a] shadow-[0px_25px_50px_-12px_#00000026] dark:ring-[#ffffff14]">
-        <div className="relative aspect-[1536/342] w-full overflow-hidden bg-white">
+        <div className="relative h-[180px] w-full overflow-hidden bg-white sm:h-[220px] lg:h-[260px]">
           <img
             src="/images/turanda_academy_header.png"
             alt="Turanda Tarım Akademisi"
