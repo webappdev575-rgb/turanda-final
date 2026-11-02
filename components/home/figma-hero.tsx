@@ -113,7 +113,7 @@ export function FigmaHero() {
       {/* Heading — badge removed, moved up */}
       <header className="relative z-10 mx-auto flex w-full max-w-[1024px] flex-col items-center px-4 pt-6 sm:px-8 lg:px-0 lg:pt-8">
         <div className="flex w-full flex-col items-center">
-          <h1 className="w-full max-w-[720px] text-center text-[clamp(1.75rem,3vw,2.75rem)] font-medium leading-[1.08] tracking-[0.015em] text-[#15231d] dark:text-[#f5f3eb]">
+          <h1 className="w-full max-w-[760px] text-center text-[clamp(2rem,3.25vw,3rem)] font-medium leading-[1.05] tracking-[0.01em] text-[#15231d] dark:text-[#f5f3eb]">
             {t('red.heroTitle')}
           </h1>
         </div>
