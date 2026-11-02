@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button';
 import { LocateMeButton } from '@/components/shared/locate-me-button';
 import { PredictiveSearch } from '@/components/shared/predictive-search';
 import { TURKEY_CITIES } from '@/lib/constants';
-import { HeroFloatLayer } from '@/components/home/hero-float-layer';
 import { Reveal } from '@/components/shared/reveal';
 import { useJobs } from '@/hooks/use-jobs';
 import { useStats } from '@/hooks/use-stats';
@@ -108,8 +107,6 @@ export function FigmaHero() {
 
   return (
     <section className="relative flex w-full flex-col items-stretch overflow-hidden bg-[#fffdf6] dark:bg-[#0b1611]">
-      {/* Wind-drifting dandelions, petals and specks across the dark header area */}
-      <HeroFloatLayer />
       {/* Heading — badge removed, moved up */}
       <header className="relative z-10 mx-auto flex w-full max-w-[1024px] flex-col items-center px-4 pt-6 sm:px-8 lg:px-0 lg:pt-8">
         <div className="flex w-full flex-col items-center">
