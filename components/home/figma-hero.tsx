@@ -15,9 +15,6 @@ import { useStats } from '@/hooks/use-stats';
 import { useI18n } from '@/components/i18n-provider';
 import type { TranslationKey } from '@/lib/i18n';
 
-const HERO_IMAGE =
-  'https://images.pexels.com/photos/9276463/pexels-photo-9276463.jpeg?auto=compress&cs=tinysrgb&w=1600';
-
 export function FigmaHero() {
   const { t } = useI18n();
   const router = useRouter();
@@ -232,25 +229,18 @@ export function FigmaHero() {
       {/* Boxed figure + statistics container — shared rounded frame over the full-width dark backdrop */}
       <div className="relative z-10 mt-10 w-full lg:mt-12">
         <div className="overflow-hidden rounded-none bg-[#fffdf6] dark:bg-[#0b1611]">
-          <figure className="relative h-[380px] w-full overflow-hidden sm:h-[420px] lg:h-[490px]">
-            <div
-              className="absolute inset-0 bg-cover bg-center"
-              style={{ backgroundImage: `url(${HERO_IMAGE})` }}
-              aria-hidden="true"
-            />
-            <div className="absolute inset-x-0 top-0 h-48 bg-[linear-gradient(180deg,#fffdf6_0%,#fffdf6_35%,rgba(255,253,246,0)_100%)] dark:bg-[linear-gradient(180deg,#0b1611_0%,#0b1611_35%,rgba(11,22,17,0)_100%)]" />
-            <div className="absolute inset-x-0 bottom-0 h-56 bg-[linear-gradient(0deg,rgba(8,39,29,0.8)_0%,rgba(8,39,29,0.25)_55%,rgba(8,39,29,0)_100%)] dark:bg-[linear-gradient(0deg,rgba(3,15,10,0.85)_0%,rgba(3,15,10,0.3)_55%,rgba(3,15,10,0)_100%)]" />
+          <figure className="relative h-[380px] w-full overflow-hidden bg-transparent sm:h-[420px] lg:h-[490px]">
             <figcaption className="relative z-10 flex h-full w-full flex-col items-center justify-end px-4 pb-10 sm:px-8">
               <Reveal className="w-full max-w-[1205px]" delay={150}>
                 <div className="flex w-full flex-col items-center gap-6 sm:flex-row sm:items-end sm:justify-between sm:gap-16">
-                  <h2 className="max-w-sm text-center text-3xl font-semibold leading-[0.95] text-white sm:text-4xl">
+                  <h2 className="max-w-sm text-center text-3xl font-semibold leading-[0.95] text-[#15231d] dark:text-[#f5f3eb] sm:text-4xl">
                     {t('red.figureTitle')}
                   </h2>
                   <Button
                     type="button"
                     variant="outline"
                     onClick={() => router.push('/hizmetler')}
-                    className="h-auto min-h-10 shrink-0 rounded-full border-[#ffffff59] bg-[#ffffff1a] px-4 text-white shadow-[0_0_0_1px_#ffffff14] backdrop-blur-[8px] hover:bg-[#ffffff2b] hover:text-white"
+                    className="h-auto min-h-10 shrink-0 rounded-full border-[#15231d26] bg-[#ffffff1a] px-4 text-[#15231d] shadow-[0_0_0_1px_#15231d14] backdrop-blur-[8px] hover:bg-[#15231d0d] hover:text-[#15231d] dark:border-[#ffffff26] dark:text-[#f5f3eb] dark:hover:text-[#f5f3eb]"
                   >
                     <span className="text-sm font-semibold leading-5">{t('red.figureCta')}</span>
                     <ArrowUpRight className="h-[15px] w-[15px]" aria-hidden="true" />
