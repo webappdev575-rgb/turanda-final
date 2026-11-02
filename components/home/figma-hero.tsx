@@ -111,13 +111,13 @@ export function FigmaHero() {
       {/* Wind-drifting dandelions, petals and specks across the dark header area */}
       <HeroFloatLayer />
       {/* Heading — badge removed, moved up */}
-      <header className="relative z-10 mx-auto flex w-full max-w-[1024px] flex-col items-center px-4 pt-[54px] sm:px-8 lg:px-0">
-        <div className="flex w-full flex-col items-center pt-2">
-          <h1 className="w-full max-w-[880px] text-center text-[clamp(2.25rem,5vw,4rem)] font-semibold leading-[1.12] tracking-[0.012em] text-[#15231d] dark:text-[#f5f3eb]">
+      <header className="relative z-10 mx-auto flex w-full max-w-[1024px] flex-col items-center px-4 pt-8 sm:px-8 lg:px-0 lg:pt-10">
+        <div className="flex w-full flex-col items-center">
+          <h1 className="w-full max-w-[720px] text-center text-[clamp(1.75rem,3vw,2.75rem)] font-semibold leading-[1.08] tracking-[0.015em] text-[#15231d] dark:text-[#f5f3eb]">
             {t('red.heroTitle')}
           </h1>
         </div>
-        <div className="relative flex h-9 w-full max-w-[576px] items-center justify-center mt-2 md:mt-3">
+        <div className="relative flex h-7 w-full max-w-[576px] items-center justify-center mt-3 md:mt-4">
           {heroPhrases.map((phrase, i) => (
             <p
               key={phrase}
@@ -129,7 +129,7 @@ export function FigmaHero() {
             </p>
           ))}
         </div>
-        <p className="w-full max-w-[576px] pt-5 text-center text-base leading-6 text-[#617069] dark:text-[#ffffff99] md:pt-6">
+        <p className="w-full max-w-[576px] pt-3 text-center text-base leading-6 text-[#617069] dark:text-[#ffffff99] md:pt-4">
           {t('red.heroSubtitle')}
         </p>
 
@@ -139,7 +139,7 @@ export function FigmaHero() {
             e.preventDefault();
             handleSearch();
           }}
-          className="mt-12 flex w-full max-w-4xl flex-col gap-2 rounded-2xl border border-[#15231d1a] bg-cream/95 p-2 shadow-[0px_25px_50px_-12px_#00000026] dark:border-[#ffffff14] sm:flex-row sm:items-center"
+          className="mt-6 flex w-full max-w-4xl flex-col gap-2 rounded-2xl border border-[#15231d1a] bg-cream/95 p-2 shadow-[0px_25px_50px_-12px_#00000026] dark:border-[#ffffff14] sm:flex-row sm:items-center"
         >
           <div className="relative flex min-h-12 flex-[1.5] items-center rounded-xl border border-[#15231d1a] bg-cream shadow-[0px_1px_2px_-1px_#0000001a,0px_1px_3px_#0000001a] dark:border-[#ffffff14]">
             <Search aria-hidden="true" className="pointer-events-none absolute left-4 z-10 h-[18px] w-[18px] shrink-0 text-ink-faint" />
@@ -212,7 +212,7 @@ export function FigmaHero() {
           </Button>
         </form>
 
-        <div className="flex min-h-[46px] w-full max-w-[896px] flex-wrap items-center justify-center gap-2 pt-4">
+        <div className="flex min-h-[42px] w-full max-w-[896px] flex-wrap items-center justify-center gap-2 pt-3">
           <span className="text-xs text-[#96a09a]">{t('hero.popular')}</span>
           {pills.map((pill) => (
             <button
