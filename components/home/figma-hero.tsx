@@ -113,11 +113,11 @@ export function FigmaHero() {
       {/* Heading — badge removed, moved up */}
       <header className="relative z-10 mx-auto flex w-full max-w-[1024px] flex-col items-center px-4 pt-[54px] sm:px-8 lg:px-0">
         <div className="flex w-full flex-col items-center pt-2">
-          <h1 className="w-full max-w-[896px] text-center text-[clamp(2.25rem,7vw,5.5rem)] font-semibold leading-[0.94] tracking-[-0.055em] text-[#15231d] dark:text-[#f5f3eb]">
+          <h1 className="w-full max-w-[960px] text-center text-[clamp(2.25rem,6vw,4.5rem)] font-semibold leading-[1.02] tracking-[-0.045em] text-[#15231d] dark:text-[#f5f3eb] lg:text-[4.5rem]">
             {t('red.heroTitle')}
           </h1>
         </div>
-        <div className="relative flex h-7 w-full max-w-[576px] items-center justify-center pt-4">
+        <div className="relative flex h-9 w-full max-w-[576px] items-center justify-center mt-2 md:mt-3">
           {heroPhrases.map((phrase, i) => (
             <p
               key={phrase}
@@ -129,7 +129,7 @@ export function FigmaHero() {
             </p>
           ))}
         </div>
-        <p className="w-full max-w-[576px] pt-6 text-center text-base leading-6 text-[#617069] dark:text-[#ffffff99]">
+        <p className="w-full max-w-[576px] pt-5 text-center text-base leading-6 text-[#617069] dark:text-[#ffffff99] md:pt-6">
           {t('red.heroSubtitle')}
         </p>
 
