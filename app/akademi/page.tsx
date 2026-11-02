@@ -40,21 +40,21 @@ const WORKSHOPS = [
     date: { tr: '14 Kasım', en: 'November 14', ar: '١٤ نوفمبر' },
     location: 'Antalya',
     seats: 24,
-    image: 'https://images.pexels.com/photos/2132250/pexels-photo-2132250.jpeg?auto=compress&cs=tinysrgb&w=940',
+    image: '/images/academy/farmer-for-a-day.png',
   },
   {
     title: { tr: 'Drone ile Hassas Tarım', en: 'Precision Farming with Drones', ar: 'الزراعة الدقيقة بالطائرات المسيّرة' },
     date: { tr: '21 Kasım', en: 'November 21', ar: '٢١ نوفمبر' },
     location: 'Konya',
     seats: 16,
-    image: 'https://images.pexels.com/photos/3807683/pexels-photo-3807683.jpeg?auto=compress&cs=tinysrgb&w=940',
+    image: '/images/academy/recreational-program.png',
   },
   {
     title: { tr: 'Toprak Analizi ve Gübreleme', en: 'Soil Analysis & Fertilization', ar: 'تحليل التربة والتسميد' },
     date: { tr: '28 Kasım', en: 'November 28', ar: '٢٨ نوفمبر' },
     location: 'İzmir',
     seats: 30,
-    image: 'https://images.pexels.com/photos/11505049/pexels-photo-11505049.jpeg?auto=compress&cs=tinysrgb&w=940',
+    image: '/images/academy/seasonal-program.png',
   },
 ];
 
