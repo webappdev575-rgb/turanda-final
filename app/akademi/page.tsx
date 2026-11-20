@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { Suspense, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Clock, User, ArrowRight, Loader2, BookOpen, PlayCircle, FileText, CalendarDays, MapPin } from 'lucide-react';
+import { Clock, User, ArrowRight, Loader2, BookOpen, PlayCircle, FileText, CalendarDays, MapPin, CheckCircle2 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -34,27 +34,71 @@ export default function AkademiPage() {
   );
 }
 
-const WORKSHOPS = [
+const PROGRAMMES = [
   {
-    title: { tr: 'Sera Budama Atölyesi', en: 'Greenhouse Pruning Workshop', ar: 'ورشة تقليم البيوت المحمية' },
-    date: { tr: '14 Kasım', en: 'November 14', ar: '١٤ نوفمبر' },
-    location: 'Antalya',
-    seats: 24,
+    id: 'farmer-for-a-day',
+    title: { tr: 'Bir Günlük Çiftçi', en: 'Farmer for a Day', ar: 'يوم كمزارع' },
+    duration: { tr: 'Bir gün', en: 'One-day experience', ar: 'تجربة لمدة يوم واحد' },
+    time: '08:00–17:00',
+    participants: 'Urban residents, families, visitors, students and people interested in agriculture.',
     image: '/images/academy/farmer-for-a-day.png',
+    schedule: [
+      ['08:00–09:00', 'Arrival, village breakfast and welcome'],
+      ['09:00–09:30', 'Introduction to farming and safety briefing'],
+      ['09:30–10:30', 'Introduction to agricultural machinery'],
+      ['10:30–12:00', 'Hands-on field activities'],
+      ['12:00–13:00', 'Traditional village lunch'],
+      ['13:00–14:30', 'Planting, irrigation and seasonal fieldwork'],
+      ['14:30–15:30', 'Farm exploration and crop observation'],
+      ['15:30–16:30', 'Practical farming challenge'],
+      ['16:30–17:00', 'Certificate presentation and departure'],
+    ],
+    note: 'Activities change according to the agricultural season.',
   },
   {
-    title: { tr: 'Drone ile Hassas Tarım', en: 'Precision Farming with Drones', ar: 'الزراعة الدقيقة بالطائرات المسيّرة' },
-    date: { tr: '21 Kasım', en: 'November 21', ar: '٢١ نوفمبر' },
-    location: 'Konya',
-    seats: 16,
+    id: 'weekend-farming',
+    title: { tr: 'Hafta Sonu Tarım Programı', en: 'Weekend Farming Programme', ar: 'برنامج الزراعة لوقت نهاية الأسبوع' },
+    duration: { tr: 'İki gün', en: 'Two-day practical course', ar: 'دورة عملية لمدة يومين' },
+    participants: 'Beginners, aspiring farmers, agricultural enthusiasts and people wishing to develop practical farming skills.',
     image: '/images/academy/recreational-program.png',
+    schedule: [
+      ['Saturday', 'Understanding the Farm'],
+      ['09:00–10:00', 'Introduction to modern agriculture'],
+      ['10:00–11:00', 'Soil preparation and soil analysis'],
+      ['11:00–12:30', 'Crop selection, planting and seeding'],
+      ['12:30–13:30', 'Lunch'],
+      ['13:30–15:00', 'Tractor and agricultural machinery demonstrations'],
+      ['15:00–16:30', 'Practical field preparation'],
+      ['Sunday', 'Working the Land'],
+      ['09:00–10:00', 'Irrigation systems and water management'],
+      ['10:00–11:30', 'Installation and operation of irrigation equipment'],
+      ['11:30–12:30', 'Fertilisation and crop nutrition'],
+      ['12:30–13:30', 'Lunch'],
+      ['13:30–15:00', 'Crop monitoring and field management'],
+      ['15:00–16:00', 'Machinery operation and maintenance'],
+      ['16:00–16:30', 'Assessment and certificate presentation'],
+    ],
   },
   {
-    title: { tr: 'Toprak Analizi ve Gübreleme', en: 'Soil Analysis & Fertilization', ar: 'تحليل التربة والتسميد' },
-    date: { tr: '28 Kasım', en: 'November 28', ar: '٢٨ نوفمبر' },
-    location: 'İzmir',
-    seats: 30,
+    id: 'professional-farming',
+    title: { tr: 'Altı Aylık Profesyonel Çiftçilik Programı', en: 'Six-Month Professional Farming Programme', ar: 'برنامج الزراعة المهنية لمدة ستة أشهر' },
+    duration: { tr: 'Altı aylık eğitim', en: 'Six-month paid training', ar: 'تدريب مدفوع لمدة ستة أشهر' },
+    participants: 'Aspiring professional farmers, young people entering agriculture and individuals wishing to establish or manage agricultural operations.',
     image: '/images/academy/seasonal-program.png',
+    months: [
+      ['1', 'Soil Science & Land Preparation', 'Soil testing, soil structure, ploughing, cultivation and field preparation'],
+      ['2', 'Crop Production & Planting', 'Seed selection, planting techniques, crop rotation and fertilisation'],
+      ['3', 'Irrigation & Water Management', 'Drip irrigation, sprinklers, water pressure, automation and water conservation'],
+      ['4', 'Agricultural Machinery & Technology', 'Tractor operation, machinery calibration, maintenance and modern equipment'],
+      ['5', 'Crop Protection & Farm Management', 'Pest and disease identification, weed control, crop monitoring and farm planning'],
+      ['6', 'Harvesting, Economics & Professional Farm Management', 'Harvesting, storage, marketing, cost calculations and preparation of a farm business plan'],
+    ],
+    outcomes: [
+      'Practical competency assessment',
+      'Individual farm-management project',
+      'Evaluation of agricultural knowledge',
+      'Certificate of completion',
+    ],
   },
 ];
 
@@ -90,33 +134,109 @@ function AkademiPageContent() {
         </div>
       </div>
 
-      {/* In-person workshops — sit above the online course catalog */}
+      {/* Turanda Agri Academy training programmes */}
       <section className="mt-10">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h2 className="text-2xl font-bold text-foreground">{t('akademi.workshopsTitle') as string}</h2>
-            <p className="mt-1 text-sm text-muted-foreground">{t('akademi.workshopsDesc') as string}</p>
-          </div>
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Turanda Agri Academy – Training Programmes</h1>
+          <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
+            Practical, on-farm programmes for first-time visitors, developing farmers and future agricultural professionals.
+          </p>
         </div>
-        <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {WORKSHOPS.map((w) => (
-            <Card key={w.location} className="group h-full overflow-hidden border-border transition-all hover:shadow-lg hover:border-primary/30">
-              <div className="relative h-44 overflow-hidden">
-                <img src={w.image} alt={w.title[locale]} className="h-full w-full object-cover transition-transform group-hover:scale-105" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                <div className="absolute bottom-3 left-3 flex items-center gap-1.5 rounded-full bg-cream/90 px-3 py-1 text-[11px] font-bold text-brand backdrop-blur-[4px]">
-                  <CalendarDays className="h-3 w-3" />{w.date[locale]}
+        <div className="mt-6 space-y-6">
+          {PROGRAMMES.map((programme, index) => (
+            <Card key={programme.id} className="overflow-hidden border-border">
+              <div className="grid md:grid-cols-[280px_1fr]">
+                <div className="relative min-h-52 overflow-hidden">
+                  <img src={programme.image} alt={programme.title[locale]} className="absolute inset-0 h-full w-full object-cover" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent" />
+                  <Badge className="absolute bottom-4 left-4 bg-cream/95 text-brand border-0">
+                    {index + 1}. {programme.duration[locale]}
+                  </Badge>
                 </div>
-              </div>
-              <div className="space-y-2.5 p-5">
-                <h3 className="font-bold text-foreground leading-tight">{w.title[locale]}</h3>
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{w.location}</span>
-                  <span className="flex items-center gap-1"><User className="h-3 w-3" />{w.seats} {t('akademi.workshopSeats') as string}</span>
+                <div className="p-5 sm:p-6">
+                  <h2 className="text-2xl font-bold text-foreground">{programme.title[locale]}</h2>
+                  {programme.time && (
+                    <p className="mt-2 flex items-center gap-1.5 text-sm font-semibold text-primary">
+                      <CalendarDays className="h-4 w-4" /> Duration: {programme.time}
+                    </p>
+                  )}
+                  <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                    <span className="font-semibold text-foreground">Target participants:</span> {programme.participants}
+                  </p>
+                  {programme.note && (
+                    <p className="mt-3 text-sm italic text-muted-foreground">{programme.note}</p>
+                  )}
+
+                  {programme.schedule && (
+                    <details className="mt-5 rounded-xl border border-border">
+                      <summary className="cursor-pointer select-none px-4 py-3 text-sm font-semibold text-foreground">
+                        View programme schedule
+                      </summary>
+                      <div className="overflow-x-auto border-t border-border">
+                        <table className="w-full text-left text-sm">
+                          <thead className="bg-muted/50">
+                            <tr>
+                              <th className="w-32 px-4 py-3 font-semibold text-foreground">Time</th>
+                              <th className="px-4 py-3 font-semibold text-foreground">Activity</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {programme.schedule.map(([time, activity]) => (
+                              time === 'Saturday' || time === 'Sunday' ? (
+                                <tr key={time} className="bg-primary/5">
+                                  <th colSpan={2} className="px-4 py-3 font-bold text-primary">{time} – {activity}</th>
+                                </tr>
+                              ) : (
+                                <tr key={`${time}-${activity}`} className="border-t border-border/70">
+                                  <td className="whitespace-nowrap px-4 py-3 font-medium text-foreground">{time}</td>
+                                  <td className="px-4 py-3 text-muted-foreground">{activity}</td>
+                                </tr>
+                              )
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </details>
+                  )}
+
+                  {programme.months && (
+                    <details className="mt-5 rounded-xl border border-border" open>
+                      <summary className="cursor-pointer select-none px-4 py-3 text-sm font-semibold text-foreground">
+                        View six-month curriculum
+                      </summary>
+                      <div className="overflow-x-auto border-t border-border">
+                        <table className="w-full text-left text-sm">
+                          <thead className="bg-muted/50">
+                            <tr>
+                              <th className="w-20 px-4 py-3 font-semibold text-foreground">Month</th>
+                              <th className="px-4 py-3 font-semibold text-foreground">Training subject</th>
+                              <th className="px-4 py-3 font-semibold text-foreground">Practical activities</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {programme.months.map(([month, subject, activities]) => (
+                              <tr key={month} className="border-t border-border/70 align-top">
+                                <td className="px-4 py-3 font-bold text-primary">{month}</td>
+                                <td className="px-4 py-3 font-medium text-foreground">{subject}</td>
+                                <td className="px-4 py-3 text-muted-foreground">{activities}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      <div className="border-t border-border px-4 py-4">
+                        <p className="text-sm font-semibold text-foreground">The programme concludes with:</p>
+                        <ul className="mt-2 grid gap-2 text-sm text-muted-foreground sm:grid-cols-2">
+                          {programme.outcomes?.map((outcome) => (
+                            <li key={outcome} className="flex items-start gap-2">
+                              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" />{outcome}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </details>
+                  )}
                 </div>
-                <Button size="sm" className="mt-1 w-full bg-accent text-accent-foreground hover:bg-accent-light">
-                  {t('akademi.workshopRegister') as string}
-                </Button>
               </div>
             </Card>
           ))}

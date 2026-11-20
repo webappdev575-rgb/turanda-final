@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Turanda Akademi — Tarım Eğitimleri ve Kurslar',
+  title: 'Turanda Agri Academy — Tarım Eğitim Programları',
   description:
-    'Sektör uzmanlarından yapılandırılmış tarım kursları: ürün yönetimi, hayvancılık, sulama, makine kullanımı ve daha fazlası.',
+    'Bir Günlük Çiftçi, Hafta Sonu Tarım Programı ve Altı Aylık Profesyonel Çiftçilik Eğitimlerini keşfedin.',
   alternates: { canonical: '/akademi' },
 };
 
