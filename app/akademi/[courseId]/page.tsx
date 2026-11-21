@@ -164,7 +164,8 @@ function CourseDetailContent() {
         ok?: boolean;
         reason?: string;
         error?: string;
-        emailSent?: boolean;
+        adminEmailSent?: boolean;
+        confirmationEmailSent?: boolean;
         emailError?: string;
       };
 
@@ -184,7 +185,7 @@ function CourseDetailContent() {
         return;
       }
       setBookingSuccess(true);
-      if (result.emailError) {
+      if (result.emailError || result.adminEmailSent === false || result.confirmationEmailSent === false) {
         const emailErrorMessage = result.emailError === 'smtp_not_configured'
           ? lang === 'tr'
             ? 'E-posta teslimi henüz yapılandırılmadı.'
@@ -192,19 +193,20 @@ function CourseDetailContent() {
               ? 'لم يتم إعداد إرسال البريد الإلكتروني بعد.'
               : 'Email delivery is not configured yet.'
           : lang === 'tr'
-            ? 'E-posta gönderilemedi. Lütfen daha sonra tekrar deneyin.'
+            ? `Başvurunuz alındı.${result.adminEmailSent === false ? ' Turanda bildirim e-postası gönderilemedi.' : ''}${result.confirmationEmailSent === false ? ' Başvuru sahibi onay e-postası gönderilemedi.' : ''}`
             : lang === 'ar'
-              ? 'تعذر إرسال البريد الإلكتروني. يرجى المحاولة لاحقاً.'
-              : 'The email could not be sent. Please try again later.';
+              ? `تم استلام طلبك.${result.adminEmailSent === false ? ' تعذر إرسال إشعار إلى توراندا.' : ''}${result.confirmationEmailSent === false ? ' تعذر إرسال رسالة التأكيد إلى مقدم الطلب.' : ''}`
+              : `Your application was received.${result.adminEmailSent === false ? ' The notification to Turanda could not be sent.' : ''}${result.confirmationEmailSent === false ? ' The applicant confirmation could not be sent.' : ''}`;
         toast({
-          title: lang === 'tr' ? 'Başvurunuz alındı ancak e-posta gönderilemedi' : lang === 'ar' ? 'تم استلام طلبك ولكن تعذر إرسال البريد الإلكتروني' : 'Your application was received, but the email could not be sent',
+          title: lang === 'tr' ? 'Başvurunuz alındı' : lang === 'ar' ? 'تم استلام طلبك' : 'Your application was received',
           description: emailErrorMessage,
           variant: 'destructive',
         });
       }
       setRecaptchaToken('');
       await refetch();
-    } catch {
+    } catch (error) {
+      console.error('Academy booking submission failed:', error);
       toast({ title: lang === 'tr' ? 'Başvuru gönderilemedi' : lang === 'ar' ? 'تعذر إرسال الطلب' : 'Could not submit booking', variant: 'destructive' });
     } finally {
       setSubmitting(false);

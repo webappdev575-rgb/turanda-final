@@ -56,7 +56,7 @@ Copy `.env.example` into the hosting environment and provide real values through
 
 Supabase's standard variables are already used by the Edge Functions: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY`. Keep the server-side names available to the Edge Function environment even if the Next.js app uses the `NEXT_PUBLIC_` browser names.
 
-Academy confirmation emails are sent from `turandatarim@gmail.com` to the email address entered on the application form. Configure `SMTP_USER=turandatarim@gmail.com` and `SMTP_PASSWORD` as server-side environment variables in the Node.js hosting environment. Create a Google App Password for the account (2-Step Verification must be enabled); do not use the normal Gmail password. The app uses Gmail SMTP at `smtp.gmail.com:465` by default. This email path is independent of the Resend Edge Function used by other notifications.
+Academy submissions send the application details from `turandatarim@gmail.com` to that same inbox, and send a separate confirmation from that account to the address entered on the form. Configure `SMTP_USER=turandatarim@gmail.com` and `SMTP_PASSWORD` as server-side environment variables in the Node.js hosting environment. Create a Google App Password for the account (2-Step Verification must be enabled); do not use the normal Gmail password. The app uses Gmail SMTP at `smtp.gmail.com:465` by default. This email path is independent of the Resend Edge Function used by other notifications.
 
 ## 3. Local verification before upload
 

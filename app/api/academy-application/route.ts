@@ -94,10 +94,11 @@ export async function POST(request: NextRequest) {
     const smtpUser = process.env.SMTP_USER?.trim().toLowerCase();
     const smtpPassword = process.env.SMTP_PASSWORD;
     if (smtpUser !== ACADEMY_SENDER || !smtpPassword) {
-      console.error('Academy confirmation email not sent: configure SMTP_USER and SMTP_PASSWORD on the server.');
+      console.error('Academy emails not sent: configure SMTP_USER and SMTP_PASSWORD on the server.');
       return NextResponse.json({
         ok: true,
-        emailSent: false,
+        adminEmailSent: false,
+        confirmationEmailSent: false,
         emailError: 'smtp_not_configured',
       });
     }
@@ -121,34 +122,60 @@ export async function POST(request: NextRequest) {
     }[locale];
     const escapedName = escapeHtml(participantName);
     const escapedTitle = escapeHtml(courseTitle);
+    const escapedEmail = escapeHtml(participantEmail);
+    const escapedInterest = escapeHtml(farmingInterest).replace(/\n/g, '<br>');
     const htmlMessage = {
       tr: `<p>Merhaba ${escapedName},</p><p><strong>${escapedTitle}</strong> programı için başvurunuzu aldık. Başvurunuz yönetici onayını bekliyor.</p><p>Turanda Tarım</p>`,
       en: `<p>Hello ${escapedName},</p><p>We have received your application for <strong>${escapedTitle}</strong>. It is awaiting administrator approval.</p><p>Turanda Tarım</p>`,
       ar: `<p>مرحباً ${escapedName}،</p><p>لقد استلمنا طلبك للبرنامج <strong>${escapedTitle}</strong>. طلبك بانتظار موافقة المسؤول.</p><p>توراندا تاريم</p>`,
     }[locale];
+    const adminSubject = {
+      tr: `Yeni Akademi Başvurusu: ${courseTitle}`,
+      en: `New Academy Application: ${courseTitle}`,
+      ar: `طلب أكاديمية جديد: ${courseTitle}`,
+    }[locale];
+    const adminText = {
+      tr: `Yeni akademi başvurusu\n\nProgram: ${courseTitle}\nAd: ${participantName}\nE-posta: ${participantEmail}\nYaş: ${age}\nİlgi alanı: ${farmingInterest}`,
+      en: `New academy application\n\nProgramme: ${courseTitle}\nName: ${participantName}\nEmail: ${participantEmail}\nAge: ${age}\nArea of interest: ${farmingInterest}`,
+      ar: `طلب أكاديمية جديد\n\nالبرنامج: ${courseTitle}\nالاسم: ${participantName}\nالبريد الإلكتروني: ${participantEmail}\nالعمر: ${age}\nمجال الاهتمام: ${farmingInterest}`,
+    }[locale];
+    const adminHtml = `<h2>${escapeHtml(adminSubject)}</h2><p><strong>Programme:</strong> ${escapedTitle}</p><p><strong>Name:</strong> ${escapedName}</p><p><strong>Email:</strong> ${escapedEmail}</p><p><strong>Age:</strong> ${age}</p><p><strong>Area of interest:</strong><br>${escapedInterest}</p>`;
+    const confirmationSubject = {
+      tr: `Başvuru alındı: ${courseTitle}`,
+      en: `Application received: ${courseTitle}`,
+      ar: `تم استلام الطلب: ${courseTitle}`,
+    }[locale];
 
-    try {
-      await transporter.sendMail({
+    const [adminResult, confirmationResult] = await Promise.allSettled([
+      transporter.sendMail({
+        from: `Turanda Tarım <${ACADEMY_SENDER}>`,
+        to: ACADEMY_SENDER,
+        replyTo: participantEmail,
+        subject: adminSubject,
+        text: adminText,
+        html: adminHtml,
+      }),
+      transporter.sendMail({
         from: `Turanda Tarım <${ACADEMY_SENDER}>`,
         to: participantEmail,
         replyTo: ACADEMY_SENDER,
-        subject: {
-          tr: `Başvuru alındı: ${courseTitle}`,
-          en: `Application received: ${courseTitle}`,
-          ar: `تم استلام الطلب: ${courseTitle}`,
-        }[locale],
+        subject: confirmationSubject,
         text: message,
         html: htmlMessage,
-      });
-      return NextResponse.json({ ok: true, emailSent: true });
-    } catch (emailError) {
-      console.error('Academy confirmation email delivery failed:', emailError);
-      return NextResponse.json({
-        ok: true,
-        emailSent: false,
-        emailError: 'smtp_delivery_failed',
-      });
-    }
+      }),
+    ]);
+
+    const adminEmailSent = adminResult.status === 'fulfilled';
+    const confirmationEmailSent = confirmationResult.status === 'fulfilled';
+    if (!adminEmailSent) console.error('Academy admin notification email failed:', adminResult.reason);
+    if (!confirmationEmailSent) console.error('Academy applicant confirmation email failed:', confirmationResult.reason);
+
+    return NextResponse.json({
+      ok: true,
+      adminEmailSent,
+      confirmationEmailSent,
+      ...(!adminEmailSent || !confirmationEmailSent ? { emailError: 'smtp_delivery_failed' } : {}),
+    });
   } catch (error) {
     console.error('Academy application request failed:', error);
     return NextResponse.json({ ok: false, error: 'Application submission failed. Please try again.' }, { status: 500 });
