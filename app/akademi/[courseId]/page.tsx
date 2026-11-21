@@ -23,8 +23,8 @@ export default function CourseDetailPage() {
   const { user, profile } = useAuth();
   const { toast } = useToast();
   const programme = ACADEMY_PROGRAMMES.find((item) => item.slug === courseId);
-  const legacy = useCourse(courseId);
-  const legacyEnrollment = useEnrollment(courseId);
+  const legacy = useCourse(programme ? null : courseId);
+  const legacyEnrollment = useEnrollment(programme ? null : courseId);
   const { availability, loading: availabilityLoading, refetch } = useAcademyCourseAvailability(programme?.slug || null);
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
