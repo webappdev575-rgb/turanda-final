@@ -42,6 +42,54 @@ const emailTemplates = {
 
 type SupportedLocale = 'tr' | 'en' | 'ar';
 
+const ACADEMY_BOOKING_RECIPIENT = 'turandatarim@gmail.com';
+
+function escapeEmailHtml(value: string) {
+  return value.replace(/[&<>"']/g, (character) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  })[character] || character);
+}
+
+export async function createAcademyBookingNotification(booking: {
+  courseTitle: string;
+  participantName: string;
+  participantEmail: string;
+  age: number;
+  farmingInterest: string;
+}) {
+  const { data, error } = await supabase.from('notifications').insert({
+    recipient_email: ACADEMY_BOOKING_RECIPIENT,
+    recipient_name: 'Turanda Tarım',
+    notification_type: 'academy_booking',
+    subject: `New Academy Registration: ${booking.courseTitle}`,
+    body: [
+      `<h2>New Academy Registration</h2>`,
+      `<p><strong>Programme:</strong> ${escapeEmailHtml(booking.courseTitle)}</p>`,
+      `<p><strong>Participant:</strong> ${escapeEmailHtml(booking.participantName)}</p>`,
+      `<p><strong>Email:</strong> ${escapeEmailHtml(booking.participantEmail)}</p>`,
+      `<p><strong>Age:</strong> ${booking.age}</p>`,
+      `<p><strong>Area of interest:</strong><br>${escapeEmailHtml(booking.farmingInterest).replace(/\n/g, '<br>')}</p>`,
+    ].join(''),
+    status: 'pending',
+  }).select('id').maybeSingle();
+
+  if (error) return { error: error.message };
+  if (!data?.id) return { error: 'The application email could not be queued.' };
+
+  const { data: sendResult, error: sendError } = await supabase.functions.invoke('send-notification', {
+    body: { notificationId: data.id },
+  });
+  if (sendError) return { error: sendError.message };
+  if (sendResult?.failed > 0) return { error: 'The email service could not deliver the application email.' };
+  if (sendResult?.sent !== 1) return { error: 'The application email could not be confirmed as sent.' };
+
+  return { error: null };
+}
+
 const messageEmailTemplates = {
   tr: (senderName: string, jobTitle: string, preview: string, conversationUrl: string) => ({
     subject: `Yeni Mesaj: ${senderName}`,

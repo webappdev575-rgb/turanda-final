@@ -13,9 +13,11 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useI18n } from '@/components/i18n-provider';
 import { useAuth } from '@/components/auth-provider';
+import { Recaptcha } from '@/components/recaptcha';
 import { useAcademyCourseAvailability, submitAcademyCourseBooking, useCourse, useEnrollment } from '@/hooks/use-academy';
 import { useToast } from '@/hooks/use-toast';
 import { ACADEMY_PROGRAMMES, type AcademyLocale, type AcademyProgramme } from '@/lib/academy-programmes';
+import { createAcademyBookingNotification } from '@/lib/notifications';
 
 export default function CourseDetailPage() {
   return (
@@ -39,6 +41,8 @@ function CourseDetailContent() {
   const [open, setOpen] = useState(false);
   const [compareOpen, setCompareOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [recaptchaToken, setRecaptchaToken] = useState('');
+  const [recaptchaKey, setRecaptchaKey] = useState(0);
   const [form, setForm] = useState({
     participantName: '',
     participantEmail: '',
@@ -130,8 +134,25 @@ function CourseDetailContent() {
       toast({ title: lang === 'tr' ? 'Lütfen tüm alanları doldurun' : lang === 'ar' ? 'يرجى تعبئة جميع الحقول' : 'Please complete every field', variant: 'destructive' });
       return;
     }
+    if (!recaptchaToken) {
+      toast({ title: lang === 'tr' ? 'Lütfen robot olmadığınızı doğrulayın' : lang === 'ar' ? 'يرجى التحقق من أنك لست روبوتاً' : 'Please complete the CAPTCHA verification', variant: 'destructive' });
+      return;
+    }
     setSubmitting(true);
     try {
+      const captchaResponse = await fetch('/api/recaptcha-verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: recaptchaToken }),
+      });
+      const captchaResult: { success?: boolean } = await captchaResponse.json();
+      if (!captchaResponse.ok || !captchaResult.success) {
+        setRecaptchaToken('');
+        setRecaptchaKey((current) => current + 1);
+        toast({ title: lang === 'tr' ? 'CAPTCHA doğrulaması başarısız oldu' : lang === 'ar' ? 'فشل التحقق من CAPTCHA' : 'CAPTCHA verification failed', variant: 'destructive' });
+        return;
+      }
+
       const result = await submitAcademyCourseBooking({
         courseSlug: programme.slug,
         participantName: form.participantName,
@@ -148,8 +169,29 @@ function CourseDetailContent() {
         toast({ title: reason, variant: 'destructive' });
         return;
       }
+      let notificationError: string | null = null;
+      try {
+        const notificationResult = await createAcademyBookingNotification({
+          courseTitle: programme.title[lang],
+          participantName: form.participantName,
+          participantEmail: form.participantEmail,
+          age,
+          farmingInterest: form.farmingInterest,
+        });
+        notificationError = notificationResult.error;
+      } catch (notificationFailure) {
+        notificationError = notificationFailure instanceof Error ? notificationFailure.message : String(notificationFailure);
+      }
       toast({ title: labels.submitted, description: labels.submitDesc });
+      if (notificationError) {
+        toast({
+          title: lang === 'tr' ? 'Başvurunuz alındı ancak bildirim e-postası gönderilemedi' : lang === 'ar' ? 'تم استلام طلبك ولكن تعذر إرسال إشعار بالبريد الإلكتروني' : 'Your application was received, but the notification email could not be sent',
+          description: notificationError,
+          variant: 'destructive',
+        });
+      }
       setOpen(false);
+      setRecaptchaToken('');
       setForm({ participantName: profile?.full_name || '', participantEmail: user?.email || '', age: '', farmingInterest: '' });
       await refetch();
     } catch {
@@ -292,7 +334,10 @@ function CourseDetailContent() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={(value) => {
+        setOpen(value);
+        if (!value) setRecaptchaToken('');
+      }}>
         <DialogContent>
           <DialogHeader><DialogTitle>{labels.participate} — {programme.title[lang]}</DialogTitle></DialogHeader>
           <div className="grid gap-4">
@@ -300,8 +345,9 @@ function CourseDetailContent() {
             <div className="space-y-1"><Label>{labels.email}</Label><Input type="email" value={form.participantEmail} onChange={(e) => setForm({ ...form, participantEmail: e.target.value })} /></div>
             <div className="space-y-1"><Label>{labels.age}</Label><Input type="number" min={1} max={120} value={form.age} onChange={(e) => setForm({ ...form, age: e.target.value })} /></div>
             <div className="space-y-1"><Label>{labels.interest}</Label><Textarea value={form.farmingInterest} onChange={(e) => setForm({ ...form, farmingInterest: e.target.value })} /></div>
+            <Recaptcha key={recaptchaKey} onVerify={setRecaptchaToken} action="academy_booking" />
           </div>
-          <DialogFooter><Button onClick={submit} disabled={submitting}>{submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}{labels.submit}</Button></DialogFooter>
+          <DialogFooter><Button onClick={submit} disabled={submitting || !recaptchaToken}>{submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}{labels.submit}</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
