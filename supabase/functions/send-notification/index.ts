@@ -11,7 +11,6 @@ Deno.serve(async (req: Request) => {
 
   try {
     const { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, RESEND_API_KEY } = Deno.env.toObject();
-    const RESEND_FROM_EMAIL = Deno.env.get("RESEND_FROM_EMAIL")?.trim();
 
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
       return new Response(JSON.stringify({ error: "Missing Supabase configuration" }), {
@@ -22,13 +21,6 @@ Deno.serve(async (req: Request) => {
 
     if (!RESEND_API_KEY) {
       return new Response(JSON.stringify({ error: "RESEND_API_KEY not configured. Notifications will remain pending." }), {
-        status: 503,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    if (!RESEND_FROM_EMAIL) {
-      return new Response(JSON.stringify({ error: "RESEND_FROM_EMAIL must be configured with an address on a domain verified in Resend." }), {
         status: 503,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -86,7 +78,7 @@ Deno.serve(async (req: Request) => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            from: `Turanda <${RESEND_FROM_EMAIL}>`,
+            from: "Turanda <noreply@resend.dev>",
             to: notif.recipient_email,
             subject: notif.subject,
             html: notif.body,

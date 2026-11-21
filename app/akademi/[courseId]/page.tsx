@@ -14,10 +14,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { useI18n } from '@/components/i18n-provider';
 import { useAuth } from '@/components/auth-provider';
 import { Recaptcha } from '@/components/recaptcha';
-import { useAcademyCourseAvailability, submitAcademyCourseBooking, useCourse, useEnrollment } from '@/hooks/use-academy';
+import { useAcademyCourseAvailability, useCourse, useEnrollment } from '@/hooks/use-academy';
 import { useToast } from '@/hooks/use-toast';
 import { ACADEMY_PROGRAMMES, type AcademyLocale, type AcademyProgramme } from '@/lib/academy-programmes';
-import { createAcademyBookingNotification } from '@/lib/notifications';
+import { supabase } from '@/lib/supabase';
 
 export default function CourseDetailPage() {
   return (
@@ -141,53 +141,64 @@ function CourseDetailContent() {
     }
     setSubmitting(true);
     try {
-      const captchaResponse = await fetch('/api/recaptcha-verify', {
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) throw sessionError;
+
+      const response = await fetch('/api/academy-application', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: recaptchaToken }),
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
+        body: JSON.stringify({
+          token: recaptchaToken,
+          courseSlug: programme.slug,
+          participantName: form.participantName,
+          participantEmail: form.participantEmail,
+          age,
+          farmingInterest: form.farmingInterest,
+          locale: lang,
+        }),
       });
-      const captchaResult: { success?: boolean } = await captchaResponse.json();
-      if (!captchaResponse.ok || !captchaResult.success) {
+      const result = await response.json() as {
+        ok?: boolean;
+        reason?: string;
+        error?: string;
+        emailSent?: boolean;
+        emailError?: string;
+      };
+
+      if (result.error?.includes('CAPTCHA')) {
         setRecaptchaToken('');
         setRecaptchaKey((current) => current + 1);
         toast({ title: lang === 'tr' ? 'CAPTCHA doğrulaması başarısız oldu' : lang === 'ar' ? 'فشل التحقق من CAPTCHA' : 'CAPTCHA verification failed', variant: 'destructive' });
         return;
       }
-
-      const result = await submitAcademyCourseBooking({
-        courseSlug: programme.slug,
-        participantName: form.participantName,
-        participantEmail: form.participantEmail,
-        age,
-        farmingInterest: form.farmingInterest,
-      });
-      if (!result.ok) {
+      if (!response.ok || !result.ok) {
         const reason = result.reason === 'full'
           ? (lang === 'tr' ? 'Kontenjan doldu' : lang === 'ar' ? 'المقاعد ممتلئة' : 'This course is full')
           : result.reason === 'duplicate'
             ? (lang === 'tr' ? 'Bu e-posta ile zaten başvuru yapılmış' : lang === 'ar' ? 'يوجد طلب سابق بهذا البريد الإلكتروني' : 'A request already exists for this email')
-            : (lang === 'tr' ? 'Başvuru gönderilemedi' : lang === 'ar' ? 'تعذر إرسال الطلب' : 'Could not submit booking');
+            : result.error || (lang === 'tr' ? 'Başvuru gönderilemedi' : lang === 'ar' ? 'تعذر إرسال الطلب' : 'Could not submit booking');
         toast({ title: reason, variant: 'destructive' });
         return;
       }
-      let notificationError: string | null = null;
-      try {
-        const notificationResult = await createAcademyBookingNotification({
-          courseTitle: programme.title[lang],
-          participantName: form.participantName,
-          participantEmail: form.participantEmail,
-          age,
-          farmingInterest: form.farmingInterest,
-        });
-        notificationError = notificationResult.error;
-      } catch (notificationFailure) {
-        notificationError = notificationFailure instanceof Error ? notificationFailure.message : String(notificationFailure);
-      }
       setBookingSuccess(true);
-      if (notificationError) {
+      if (result.emailError) {
+        const emailErrorMessage = result.emailError === 'smtp_not_configured'
+          ? lang === 'tr'
+            ? 'E-posta teslimi henüz yapılandırılmadı.'
+            : lang === 'ar'
+              ? 'لم يتم إعداد إرسال البريد الإلكتروني بعد.'
+              : 'Email delivery is not configured yet.'
+          : lang === 'tr'
+            ? 'E-posta gönderilemedi. Lütfen daha sonra tekrar deneyin.'
+            : lang === 'ar'
+              ? 'تعذر إرسال البريد الإلكتروني. يرجى المحاولة لاحقاً.'
+              : 'The email could not be sent. Please try again later.';
         toast({
-          title: lang === 'tr' ? 'Başvurunuz alındı ancak bildirim e-postası gönderilemedi' : lang === 'ar' ? 'تم استلام طلبك ولكن تعذر إرسال إشعار بالبريد الإلكتروني' : 'Your application was received, but the notification email could not be sent',
-          description: notificationError,
+          title: lang === 'tr' ? 'Başvurunuz alındı ancak e-posta gönderilemedi' : lang === 'ar' ? 'تم استلام طلبك ولكن تعذر إرسال البريد الإلكتروني' : 'Your application was received, but the email could not be sent',
+          description: emailErrorMessage,
           variant: 'destructive',
         });
       }

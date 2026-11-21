@@ -28,24 +28,6 @@ export function useAcademyCourseAvailability(courseSlug: string | null) {
   return { availability, loading, refetch };
 }
 
-export async function submitAcademyCourseBooking(input: {
-  courseSlug: string;
-  participantName: string;
-  participantEmail: string;
-  age: number;
-  farmingInterest: string;
-}) {
-  const { data, error } = await supabase.rpc('submit_academy_course_booking', {
-    p_course_slug: input.courseSlug,
-    p_participant_name: input.participantName,
-    p_participant_email: input.participantEmail,
-    p_age: input.age,
-    p_farming_interest: input.farmingInterest,
-  });
-  if (error) throw error;
-  return data as { ok: boolean; reason?: string; booking_id?: string };
-}
-
 export function useAdminAcademyBookings() {
   const [settings, setSettings] = useState<AcademyCourseSettings[]>([]);
   const [bookings, setBookings] = useState<AcademyCourseBooking[]>([]);

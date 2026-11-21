@@ -32,7 +32,6 @@ Copy `.env.example` into the hosting environment and provide real values through
 | `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` | Recommended | Browser-safe | reCAPTCHA v3 site key. |
 | `RECAPTCHA_SECRET_KEY` | Recommended | Server-only | Server verification key used by `app/api/recaptcha-verify/route.ts`. |
 | `RESEND_API_KEY` | Required for notification emails | Supabase Edge Function-only | Resend API key used by `send-notification`. Configure with Supabase Function secrets. |
-| `RESEND_FROM_EMAIL` | Required for notification emails | Supabase Edge Function-only | Sender email on a domain verified in Resend. The test sender `noreply@resend.dev` is not used. |
 | `WEATHER_API_KEY` | Optional | Server/provider-only | Weather provider credential. |
 | `TMEX_API_KEY` | Optional | Server/provider-only | Commodity source credential. |
 | `COMMODITY_API_KEY` | Optional | Server/provider-only | Custom commodity source credential. |
@@ -41,11 +40,11 @@ Copy `.env.example` into the hosting environment and provide real values through
 | `AI_IMAGE_PROVIDER` | Optional | Server-only | `openai`, `stability`, or `custom`. |
 | `AI_IMAGE_ENDPOINT` | Optional | Server-only | Custom thumbnail endpoint when applicable. |
 | `EMAIL_PROVIDER` | Optional | Server-only | Use `mock` during development; the current auth email service is Supabase. |
-| `SMTP_HOST` | Optional | Server-only | Future/custom SMTP host. |
-| `SMTP_PORT` | Optional | Server-only | SMTP port, normally `587` or `465`. |
-| `SMTP_USER` | Optional | Server-only | SMTP account name. |
-| `SMTP_PASSWORD` | Optional | Server-only | SMTP password. |
-| `SMTP_FROM` | Optional | Server-only | Approved sender address. |
+| `SMTP_HOST` | Optional | Server-only | SMTP server; defaults to `smtp.gmail.com` for academy confirmations. |
+| `SMTP_PORT` | Optional | Server-only | SMTP port; defaults to `465` for Gmail SSL. |
+| `SMTP_USER` | Required for academy confirmation emails | Server-only | Must be `turandatarim@gmail.com` for academy confirmations. |
+| `SMTP_PASSWORD` | Required for academy confirmation emails | Server-only | Gmail App Password for the sender account. Never use or commit the account password. |
+| `SMTP_FROM` | Optional | Server-only | Sender override for other SMTP integrations; academy confirmations always use `turandatarim@gmail.com`. |
 | `PHONE_VERIFICATION_PROVIDER` | Optional | Server-only | Use `mock` in development; the current phone OTP service is Supabase Auth. |
 | `TWILIO_ACCOUNT_SID` | Optional | Server-only | Future Twilio account identifier. |
 | `TWILIO_AUTH_TOKEN` | Optional | Server-only | Future Twilio secret. |
@@ -57,7 +56,7 @@ Copy `.env.example` into the hosting environment and provide real values through
 
 Supabase's standard variables are already used by the Edge Functions: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY`. Keep the server-side names available to the Edge Function environment even if the Next.js app uses the `NEXT_PUBLIC_` browser names.
 
-Configure `RESEND_API_KEY` and `RESEND_FROM_EMAIL` as Supabase Edge Function secrets before deploying `send-notification`. Verify the sender's domain in Resend first. Academy registration notifications are addressed to `turandatarim@gmail.com`; this recipient address does not have to match the verified sender.
+Academy confirmation emails are sent from `turandatarim@gmail.com` to the email address entered on the application form. Configure `SMTP_USER=turandatarim@gmail.com` and `SMTP_PASSWORD` as server-side environment variables in the Node.js hosting environment. Create a Google App Password for the account (2-Step Verification must be enabled); do not use the normal Gmail password. The app uses Gmail SMTP at `smtp.gmail.com:465` by default. This email path is independent of the Resend Edge Function used by other notifications.
 
 ## 3. Local verification before upload
 
