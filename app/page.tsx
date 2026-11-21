@@ -76,7 +76,7 @@ export default function HomePage() {
 
   return (
     <div className="bg-[#fffdf6] dark:bg-[#0b1611]">
-      {/* ─── Figma hero: headline, preserved search bar + golden-trail button, figure, live stats ─── */}
+      {/* ─── Figma hero: headline, preserved search bar + golden-trail button, live stats ─── */}
       <FigmaHero />
 
       {/* ─── Figma: 2025 innovation statement ─── */}

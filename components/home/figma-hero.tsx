@@ -228,49 +228,25 @@ export function FigmaHero() {
         </div>
       </header>
 
-      {/* Boxed figure + statistics container — shared rounded frame over the full-width dark backdrop */}
+      {/* Live statistics strip */}
       <div className="relative z-10 mt-4 w-full lg:mt-6">
-        <div className="overflow-hidden rounded-none bg-[#fffdf6] dark:bg-[#0b1611]">
-          <figure className="relative h-[320px] w-full overflow-hidden bg-transparent sm:h-[350px] lg:h-[380px]">
-            <figcaption className="relative z-10 flex h-full w-full flex-col items-center justify-end px-4 pb-10 sm:px-8">
-              <Reveal className="w-full max-w-[1205px]" delay={150}>
-                <div className="flex w-full flex-col items-center gap-6 sm:flex-row sm:items-end sm:justify-between sm:gap-16">
-                  <h2 className="max-w-sm text-center text-3xl font-semibold leading-[0.95] text-[#15231d] dark:text-[#f5f3eb] sm:text-4xl">
-                    {t('red.figureTitle')}
-                  </h2>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => router.push('/hizmetler')}
-                    className="h-auto min-h-10 shrink-0 rounded-full border-[#15231d26] bg-[#ffffff1a] px-4 text-[#15231d] shadow-[0_0_0_1px_#15231d14] backdrop-blur-[8px] hover:bg-[#15231d0d] hover:text-[#15231d] dark:border-[#ffffff26] dark:text-[#f5f3eb] dark:hover:text-[#f5f3eb]"
-                  >
-                    <span className="text-sm font-semibold leading-5">{t('red.figureCta')}</span>
-                    <ArrowUpRight className="h-[15px] w-[15px]" aria-hidden="true" />
-                  </Button>
-                </div>
-              </Reveal>
-            </figcaption>
-          </figure>
-
-          {/* Live statistics strip */}
-          <dl className="grid grid-cols-2 bg-[#fffdf6] dark:bg-[#0b1611] sm:grid-cols-4">
-            {statItems.map((statistic, index) => (
-              <div
-                key={statistic.label}
-                className={`flex min-h-[108px] flex-col items-center px-4 py-7 text-center ${
-                  index < statItems.length - 1 ? 'border-r border-[#15231d1a] dark:border-[#ffffff14]' : ''
-                }`}
-              >
-                <dt className="text-2xl font-medium leading-8 text-[#15231d] dark:text-[#f5f3eb]">
-                  {statistic.value}
-                </dt>
-                <dd className="pt-1 text-xs font-normal leading-4 text-[#617069] dark:text-[#ffffff99]">
-                  {statistic.label}
-                </dd>
-              </div>
-            ))}
-          </dl>
-        </div>
+        <dl className="grid grid-cols-2 bg-[#fffdf6] dark:bg-[#0b1611] sm:grid-cols-4">
+          {statItems.map((statistic, index) => (
+            <div
+              key={statistic.label}
+              className={`flex min-h-[108px] flex-col items-center px-4 py-7 text-center ${
+                index < statItems.length - 1 ? 'border-r border-[#15231d1a] dark:border-[#ffffff14]' : ''
+              }`}
+            >
+              <dt className="text-2xl font-medium leading-8 text-[#15231d] dark:text-[#f5f3eb]">
+                {statistic.value}
+              </dt>
+              <dd className="pt-1 text-xs font-normal leading-4 text-[#617069] dark:text-[#ffffff99]">
+                {statistic.label}
+              </dd>
+            </div>
+          ))}
+        </dl>
       </div>
     </section>
   );
