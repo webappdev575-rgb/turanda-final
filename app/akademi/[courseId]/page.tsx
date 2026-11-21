@@ -346,55 +346,57 @@ function ProgrammeComparisonCard({
     : programme.schedule?.map((row) => `${row.time}: ${row.activity[lang]}`) ?? [];
 
   return (
-    <Card className="min-w-0 p-4 md:row-span-9 md:grid md:grid-rows-[subgrid]">
-      <h3 className="flex items-start text-lg font-bold leading-tight text-foreground md:pb-3 md:border-b md:border-border/60">
+    <Card className="flex h-full min-w-0 flex-col p-5">
+      <h3 className="text-lg font-bold leading-tight text-foreground md:min-h-14">
         {programme.title[lang]}
       </h3>
-      <p className="mt-2 text-sm leading-5 text-muted-foreground md:mt-0 md:py-3 md:border-b md:border-border/60">
+      <p className="mt-2 text-sm leading-6 text-muted-foreground md:min-h-28">
         {programme.description[lang]}
       </p>
       {loading ? (
-        <div className="mt-4 flex min-h-10 items-center gap-2 text-sm text-muted-foreground md:mt-0 md:py-3 md:border-b md:border-border/60">
+        <div className="mt-5 flex min-h-16 items-center gap-2 rounded-lg bg-primary/5 p-3 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
           {labels.loadingSeats}
         </div>
       ) : (
-        <p className="mt-4 min-h-10 text-sm font-medium leading-5 text-primary md:mt-0 md:flex md:items-center md:py-3 md:border-b md:border-border/60" aria-live="polite">
+        <p className="mt-5 flex min-h-16 items-center rounded-lg bg-primary/5 p-3 text-sm font-medium leading-5 text-primary" aria-live="polite">
           {remaining} {labels.spotsRemaining} — {availability?.accepted ?? 0}/{availability?.capacity ?? 0} {labels.registered}
         </p>
       )}
-      <dl className="contents text-sm">
-        <div className="mt-4 border-t border-border/60 pt-3 md:m-0">
+      <dl className="mt-5 flex flex-1 flex-col text-sm">
+        <div className="border-t border-border/70 py-4 md:min-h-24">
           <dt className="font-semibold text-foreground">{labels.duration}</dt>
           <dd className="mt-1 text-muted-foreground">{programme.duration[lang]}</dd>
         </div>
-        <div className="mt-3 border-t border-border/60 pt-3 md:m-0">
+        <div className="border-t border-border/70 py-4 md:min-h-36">
           <dt className="font-semibold text-foreground">{labels.participants}</dt>
           <dd className="mt-1 text-muted-foreground">{programme.participants[lang]}</dd>
         </div>
-        <div className="mt-3 border-t border-border/60 pt-3 md:m-0">
+        <div className="border-t border-border/70 py-4 md:min-h-36">
           <dt className="font-semibold text-foreground">{labels.prerequisites}</dt>
           <dd>
-            <ul className="mt-1 list-disc space-y-1 pl-5 text-muted-foreground">
+            <ul className="mt-2 list-disc space-y-2 pl-5 text-muted-foreground">
               {programme.prerequisites.map((item) => <li key={item.en}>{item[lang]}</li>)}
             </ul>
           </dd>
         </div>
-        <div className="mt-3 border-t border-border/60 pt-3 md:m-0">
+        <div className="border-t border-border/70 py-4">
           <dt className="font-semibold text-foreground">{labels.curriculum}</dt>
-          {curriculum.length > 0 ? (
-            <ul className="mt-1 space-y-2 text-muted-foreground">
-              {curriculum.map((item) => <li key={item} className="border-l-2 border-primary/20 pl-2">{item}</li>)}
-            </ul>
-          ) : (
-            <dd className="mt-1 text-muted-foreground">{labels.noCurriculum}</dd>
-          )}
+          <dd className="mt-3">
+            {curriculum.length > 0 ? (
+              <ul className="space-y-3 text-muted-foreground">
+                {curriculum.map((item) => <li key={item} className="border-l-2 border-primary/20 pl-2">{item}</li>)}
+              </ul>
+            ) : (
+              <p className="text-muted-foreground">{labels.noCurriculum}</p>
+            )}
+          </dd>
         </div>
-        <div className="mt-3 border-t border-border/60 pt-3 md:m-0">
+        <div className="border-t border-border/70 py-4 md:min-h-32">
           <dt className="font-semibold text-foreground">{labels.concludes}</dt>
           {programme.outcomes && programme.outcomes.length > 0 ? (
             <dd>
-              <ul className="mt-1 list-disc space-y-1 pl-5 text-muted-foreground">
+              <ul className="mt-2 list-disc space-y-2 pl-5 text-muted-foreground">
                 {programme.outcomes.map((item) => <li key={item.en}>{item[lang]}</li>)}
               </ul>
             </dd>
@@ -404,12 +406,12 @@ function ProgrammeComparisonCard({
         </div>
       </dl>
       {loading || isFull ? (
-        <Button className="mt-5 w-full md:mt-3" disabled>
+        <Button className="mt-5 w-full" disabled>
           <GraduationCap className="mr-2 h-4 w-4" />
           {isFull ? labels.full : labels.enrollNow}
         </Button>
       ) : (
-        <Button asChild className="mt-5 w-full md:mt-3">
+        <Button asChild className="mt-5 w-full">
           <Link href={`/akademi/${programme.slug}?enroll=1`}>
             <GraduationCap className="mr-2 h-4 w-4" />
             {labels.enrollNow}
