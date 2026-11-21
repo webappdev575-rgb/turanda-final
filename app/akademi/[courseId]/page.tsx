@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { Suspense, useEffect, useState } from 'react';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, CalendarDays, GraduationCap, Loader2, User, Clock, BookOpen, PlayCircle, FileText, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CalendarDays, GraduationCap, Loader2, User, Clock, BookOpen, PlayCircle, FileText, CheckCircle2 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -15,10 +15,20 @@ import { useI18n } from '@/components/i18n-provider';
 import { useAuth } from '@/components/auth-provider';
 import { useAcademyCourseAvailability, submitAcademyCourseBooking, useCourse, useEnrollment } from '@/hooks/use-academy';
 import { useToast } from '@/hooks/use-toast';
-import { ACADEMY_PROGRAMMES, type AcademyLocale } from '@/lib/academy-programmes';
+import { ACADEMY_PROGRAMMES, type AcademyLocale, type AcademyProgramme } from '@/lib/academy-programmes';
 
 export default function CourseDetailPage() {
+  return (
+    <Suspense fallback={<div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}>
+      <CourseDetailContent />
+    </Suspense>
+  );
+}
+
+function CourseDetailContent() {
   const { courseId } = useParams<{ courseId: string }>();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { locale } = useI18n();
   const { user, profile } = useAuth();
   const { toast } = useToast();
@@ -27,6 +37,7 @@ export default function CourseDetailPage() {
   const legacyEnrollment = useEnrollment(programme ? null : courseId);
   const { availability, loading: availabilityLoading, refetch } = useAcademyCourseAvailability(programme?.slug || null);
   const [open, setOpen] = useState(false);
+  const [compareOpen, setCompareOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({
     participantName: '',
@@ -42,6 +53,12 @@ export default function CourseDetailPage() {
       participantEmail: user?.email || current.participantEmail,
     }));
   }, [profile, user]);
+
+  useEffect(() => {
+    if (!programme || availabilityLoading || searchParams.get('enroll') !== '1') return;
+    if ((availability?.remaining ?? 0) > 0) setOpen(true);
+    router.replace(`/akademi/${programme.slug}`, { scroll: false });
+  }, [programme, router, searchParams, availabilityLoading, availability?.remaining]);
 
   useEffect(() => {
     if (!programme) return;
@@ -102,9 +119,9 @@ export default function CourseDetailPage() {
   const remaining = availability?.remaining ?? 0;
   const isFull = !availabilityLoading && remaining <= 0;
   const labels = {
-    tr: { schedule: 'Program Takvimi', instructors: 'Eğitmenler', prerequisites: 'Ön Koşullar', seats: 'Kalan Kontenjan', participate: 'Katıl', full: 'Kontenjan Doldu', submitted: 'Başvurunuz iletildi', submitDesc: 'Başvurunuz yönetici onayı bekliyor.', name: 'Katılımcı adı', email: 'E-posta', age: 'Yaş', interest: 'Tarım ilgi alanı', submit: 'Başvuru Gönder', description: 'Açıklama', month: 'Ay', subject: 'Eğitim konusu', activities: 'Pratik faaliyetler', concludes: 'Program sonunda:', all: 'Tüm Kurslar' },
-    en: { schedule: 'Course Schedule', instructors: 'Instructors', prerequisites: 'Prerequisites', seats: 'Places Remaining', participate: 'Participate', full: 'Full', submitted: 'Booking request submitted', submitDesc: 'Your request is awaiting administrator approval.', name: 'Participant Name', email: 'Email', age: 'Age', interest: 'Area of Interest / Farming Interest', submit: 'Submit Registration', description: 'Description', month: 'Month', subject: 'Training subject', activities: 'Practical activities', concludes: 'The programme concludes with:', all: 'All Courses' },
-    ar: { schedule: 'جدول البرنامج', instructors: 'المدربون', prerequisites: 'المتطلبات السابقة', seats: 'المقاعد المتبقية', participate: 'المشاركة', full: 'مكتمل', submitted: 'تم إرسال طلب الحجز', submitDesc: 'طلبك بانتظار موافقة المسؤول.', name: 'اسم المشارك', email: 'البريد الإلكتروني', age: 'العمر', interest: 'مجال الاهتمام / الاهتمام بالزراعة', submit: 'إرسال التسجيل', description: 'الوصف', month: 'الشهر', subject: 'الموضوع التدريبي', activities: 'الأنشطة العملية', concludes: 'يختتم البرنامج بما يلي:', all: 'جميع الدورات' },
+    tr: { schedule: 'Program Takvimi', instructors: 'Eğitmenler', prerequisites: 'Ön Koşullar', seats: 'Kalan Kontenjan', participate: 'Katıl', full: 'Kontenjan Doldu', submitted: 'Başvurunuz iletildi', submitDesc: 'Başvurunuz yönetici onayı bekliyor.', name: 'Katılımcı adı', email: 'E-posta', age: 'Yaş', interest: 'Tarım ilgi alanı', submit: 'Başvuru Gönder', description: 'Açıklama', month: 'Ay', subject: 'Eğitim konusu', activities: 'Pratik faaliyetler', concludes: 'Program sonunda:', all: 'Tüm Kurslar', compare: 'Programları karşılaştır', compareTitle: 'Eğitim programlarını karşılaştırın', duration: 'Süre', participants: 'Kimler için', curriculum: 'Müfredat', enrollNow: 'Hemen kayıt olun', noCurriculum: 'Müfredat bilgisi yakında paylaşılacaktır.' },
+    en: { schedule: 'Course Schedule', instructors: 'Instructors', prerequisites: 'Prerequisites', seats: 'Places Remaining', participate: 'Participate', full: 'Full', submitted: 'Booking request submitted', submitDesc: 'Your request is awaiting administrator approval.', name: 'Participant Name', email: 'Email', age: 'Age', interest: 'Area of Interest / Farming Interest', submit: 'Submit Registration', description: 'Description', month: 'Month', subject: 'Training subject', activities: 'Practical activities', concludes: 'The programme concludes with:', all: 'All Courses', compare: 'Compare programmes', compareTitle: 'Compare training programmes', duration: 'Duration', participants: 'Who it is for', curriculum: 'Curriculum', enrollNow: 'Enroll now', noCurriculum: 'Curriculum details will be shared soon.' },
+    ar: { schedule: 'جدول البرنامج', instructors: 'المدربون', prerequisites: 'المتطلبات السابقة', seats: 'المقاعد المتبقية', participate: 'المشاركة', full: 'مكتمل', submitted: 'تم إرسال طلب الحجز', submitDesc: 'طلبك بانتظار موافقة المسؤول.', name: 'اسم المشارك', email: 'البريد الإلكتروني', age: 'العمر', interest: 'مجال الاهتمام / الاهتمام بالزراعة', submit: 'إرسال التسجيل', description: 'الوصف', month: 'الشهر', subject: 'الموضوع التدريبي', activities: 'الأنشطة العملية', concludes: 'يختتم البرنامج بما يلي:', all: 'جميع الدورات', compare: 'قارن البرامج', compareTitle: 'قارن البرامج التدريبية', duration: 'المدة', participants: 'الفئة المستهدفة', curriculum: 'المنهج الدراسي', enrollNow: 'سجّل الآن', noCurriculum: 'سيتم مشاركة تفاصيل المنهج قريباً.' },
   }[lang];
 
   const submit = async () => {
@@ -230,8 +247,42 @@ export default function CourseDetailPage() {
               </div>
             </section>
           )}
+
+          <section className="mt-8 flex flex-col gap-3 rounded-xl border border-border bg-muted/20 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+            <div>
+              <h2 className="font-semibold text-foreground">{programme.title[lang]}</h2>
+              <p className="mt-1 text-sm text-muted-foreground">{programme.duration[lang]}</p>
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button variant="outline" onClick={() => setCompareOpen(true)}>
+                {labels.compare}
+              </Button>
+              <Button disabled={isFull || availabilityLoading} onClick={() => setOpen(true)}>
+                <GraduationCap className="mr-2 h-4 w-4" />
+                {isFull ? labels.full : labels.enrollNow}
+              </Button>
+            </div>
+          </section>
         </div>
       </Card>
+
+      <Dialog open={compareOpen} onOpenChange={setCompareOpen}>
+        <DialogContent className="max-h-[90vh] max-w-6xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{labels.compareTitle}</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 md:grid-cols-3">
+            {ACADEMY_PROGRAMMES.map((item) => (
+              <ProgrammeComparisonCard
+                key={item.slug}
+                programme={item}
+                lang={lang}
+                labels={labels}
+              />
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
@@ -246,5 +297,82 @@ export default function CourseDetailPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+function ProgrammeComparisonCard({
+  programme,
+  lang,
+  labels,
+}: {
+  programme: AcademyProgramme;
+  lang: AcademyLocale;
+  labels: {
+    duration: string;
+    participants: string;
+    prerequisites: string;
+    curriculum: string;
+    month: string;
+    subject: string;
+    activities: string;
+    concludes: string;
+    enrollNow: string;
+    noCurriculum: string;
+  };
+}) {
+  const curriculum = programme.months
+    ? programme.months.map((row) => `${labels.month} ${row.month}: ${row.subject[lang]} — ${row.activities[lang]}`)
+    : programme.schedule?.map((row) => `${row.time}: ${row.activity[lang]}`) ?? [];
+
+  return (
+    <Card className="flex min-w-0 flex-col p-4">
+      <h3 className="text-lg font-bold leading-tight text-foreground">{programme.title[lang]}</h3>
+      <p className="mt-2 text-sm text-muted-foreground">{programme.description[lang]}</p>
+      <dl className="mt-4 space-y-3 text-sm">
+        <div>
+          <dt className="font-semibold text-foreground">{labels.duration}</dt>
+          <dd className="mt-1 text-muted-foreground">{programme.duration[lang]}</dd>
+        </div>
+        <div>
+          <dt className="font-semibold text-foreground">{labels.participants}</dt>
+          <dd className="mt-1 text-muted-foreground">{programme.participants[lang]}</dd>
+        </div>
+        <div>
+          <dt className="font-semibold text-foreground">{labels.prerequisites}</dt>
+          <dd>
+            <ul className="mt-1 list-disc space-y-1 pl-5 text-muted-foreground">
+              {programme.prerequisites.map((item) => <li key={item.en}>{item[lang]}</li>)}
+            </ul>
+          </dd>
+        </div>
+        <div>
+          <dt className="font-semibold text-foreground">{labels.curriculum}</dt>
+          {curriculum.length > 0 ? (
+            <ul className="mt-1 space-y-2 text-muted-foreground">
+              {curriculum.map((item) => <li key={item} className="border-l-2 border-primary/20 pl-2">{item}</li>)}
+            </ul>
+          ) : (
+            <dd className="mt-1 text-muted-foreground">{labels.noCurriculum}</dd>
+          )}
+        </div>
+        {programme.outcomes && programme.outcomes.length > 0 && (
+          <div>
+            <dt className="font-semibold text-foreground">{labels.concludes}</dt>
+            <dd>
+              <ul className="mt-1 list-disc space-y-1 pl-5 text-muted-foreground">
+                {programme.outcomes.map((item) => <li key={item.en}>{item[lang]}</li>)}
+              </ul>
+            </dd>
+          </div>
+        )}
+      </dl>
+      <Button asChild className="mt-5 w-full">
+        <Link href={`/akademi/${programme.slug}?enroll=1`}>
+          <GraduationCap className="mr-2 h-4 w-4" />
+          {labels.enrollNow}
+          <ArrowRight className="ml-2 h-4 w-4" />
+        </Link>
+      </Button>
+    </Card>
   );
 }
