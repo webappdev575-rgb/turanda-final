@@ -229,7 +229,7 @@ export function FigmaHero() {
       </header>
 
       {/* Boxed figure + statistics container — shared rounded frame over the full-width dark backdrop */}
-      <div className="relative z-10 mt-10 w-full lg:mt-12">
+      <div className="relative z-10 mt-4 w-full lg:mt-6">
         <div className="overflow-hidden rounded-none bg-[#fffdf6] dark:bg-[#0b1611]">
           <figure className="relative h-[320px] w-full overflow-hidden bg-transparent sm:h-[350px] lg:h-[380px]">
             <figcaption className="relative z-10 flex h-full w-full flex-col items-center justify-end px-4 pb-10 sm:px-8">
