@@ -52,6 +52,11 @@ export const ACADEMY_PROGRAMMES: AcademyProgramme[] = [
       { time: '15:30–16:30', activity: { tr: 'Pratik tarım meydan okuması', en: 'Practical farming challenge', ar: 'تحدٍ عملي في الزراعة' } },
       { time: '16:30–17:00', activity: { tr: 'Sertifika takdimi ve ayrılış', en: 'Certificate presentation and departure', ar: 'تقديم الشهادات والانصراف' } },
     ],
+    outcomes: [
+      { tr: 'Tarım makineleri ve temel saha güvenliği hakkında bilgi', en: 'Knowledge of agricultural machinery and essential field safety', ar: 'معرفة بالآلات الزراعية وأساسيات السلامة الميدانية' },
+      { tr: 'Ekim, sulama ve mevsimlik tarla işlerinde uygulamalı deneyim', en: 'Hands-on experience with planting, irrigation and seasonal fieldwork', ar: 'خبرة عملية في الزراعة والري والعمل الحقلي الموسمي' },
+      { tr: 'Katılım sertifikası', en: 'Certificate of participation', ar: 'شهادة مشاركة' },
+    ],
     note: { tr: 'Faaliyetler tarımsal mevsime göre değişir.', en: 'Activities change according to the agricultural season.', ar: 'تتغير الأنشطة حسب الموسم الزراعي.' },
   },
   {
@@ -87,6 +92,12 @@ export const ACADEMY_PROGRAMMES: AcademyProgramme[] = [
       { time: 'Sunday 11:30–12:30', activity: { tr: 'Gübreleme ve bitki besleme', en: 'Fertilisation and crop nutrition', ar: 'التسميد وتغذية المحاصيل' } },
       { time: 'Sunday 13:30–15:00', activity: { tr: 'Mahsul izleme ve tarla yönetimi', en: 'Crop monitoring and field management', ar: 'مراقبة المحاصيل وإدارة الحقل' } },
       { time: 'Sunday 15:00–16:30', activity: { tr: 'Makine kullanımı, bakım ve değerlendirme', en: 'Machinery operation, maintenance and assessment', ar: 'تشغيل الآلات وصيانتها والتقييم' } },
+    ],
+    outcomes: [
+      { tr: 'Toprak hazırlama, ekim ve mahsul yönetimi becerileri', en: 'Skills in soil preparation, planting and crop management', ar: 'مهارات في تحضير التربة والزراعة وإدارة المحاصيل' },
+      { tr: 'Sulama sistemleri ve su yönetimi konusunda uygulamalı deneyim', en: 'Hands-on experience with irrigation systems and water management', ar: 'خبرة عملية في أنظمة الري وإدارة المياه' },
+      { tr: 'Tarım makinelerinin güvenli kullanımı ve temel bakımı', en: 'Safe operation and basic maintenance of agricultural machinery', ar: 'التشغيل الآمن والصيانة الأساسية للآلات الزراعية' },
+      { tr: 'Programı tamamlama sertifikası', en: 'Certificate of programme completion', ar: 'شهادة إتمام البرنامج' },
     ],
   },
   {

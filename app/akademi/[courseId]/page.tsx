@@ -119,9 +119,9 @@ function CourseDetailContent() {
   const remaining = availability?.remaining ?? 0;
   const isFull = !availabilityLoading && remaining <= 0;
   const labels = {
-    tr: { schedule: 'Program Takvimi', instructors: 'Eğitmenler', prerequisites: 'Ön Koşullar', seats: 'Kalan Kontenjan', participate: 'Katıl', full: 'Kontenjan Doldu', submitted: 'Başvurunuz iletildi', submitDesc: 'Başvurunuz yönetici onayı bekliyor.', name: 'Katılımcı adı', email: 'E-posta', age: 'Yaş', interest: 'Tarım ilgi alanı', submit: 'Başvuru Gönder', description: 'Açıklama', month: 'Ay', subject: 'Eğitim konusu', activities: 'Pratik faaliyetler', concludes: 'Program sonunda:', all: 'Tüm Kurslar', compare: 'Programları karşılaştır', compareTitle: 'Eğitim programlarını karşılaştırın', duration: 'Süre', participants: 'Kimler için', curriculum: 'Müfredat', enrollNow: 'Hemen kayıt olun', noCurriculum: 'Müfredat bilgisi yakında paylaşılacaktır.' },
-    en: { schedule: 'Course Schedule', instructors: 'Instructors', prerequisites: 'Prerequisites', seats: 'Places Remaining', participate: 'Participate', full: 'Full', submitted: 'Booking request submitted', submitDesc: 'Your request is awaiting administrator approval.', name: 'Participant Name', email: 'Email', age: 'Age', interest: 'Area of Interest / Farming Interest', submit: 'Submit Registration', description: 'Description', month: 'Month', subject: 'Training subject', activities: 'Practical activities', concludes: 'The programme concludes with:', all: 'All Courses', compare: 'Compare programmes', compareTitle: 'Compare training programmes', duration: 'Duration', participants: 'Who it is for', curriculum: 'Curriculum', enrollNow: 'Enroll now', noCurriculum: 'Curriculum details will be shared soon.' },
-    ar: { schedule: 'جدول البرنامج', instructors: 'المدربون', prerequisites: 'المتطلبات السابقة', seats: 'المقاعد المتبقية', participate: 'المشاركة', full: 'مكتمل', submitted: 'تم إرسال طلب الحجز', submitDesc: 'طلبك بانتظار موافقة المسؤول.', name: 'اسم المشارك', email: 'البريد الإلكتروني', age: 'العمر', interest: 'مجال الاهتمام / الاهتمام بالزراعة', submit: 'إرسال التسجيل', description: 'الوصف', month: 'الشهر', subject: 'الموضوع التدريبي', activities: 'الأنشطة العملية', concludes: 'يختتم البرنامج بما يلي:', all: 'جميع الدورات', compare: 'قارن البرامج', compareTitle: 'قارن البرامج التدريبية', duration: 'المدة', participants: 'الفئة المستهدفة', curriculum: 'المنهج الدراسي', enrollNow: 'سجّل الآن', noCurriculum: 'سيتم مشاركة تفاصيل المنهج قريباً.' },
+    tr: { schedule: 'Program Takvimi', instructors: 'Eğitmenler', prerequisites: 'Ön Koşullar', seats: 'Kalan Kontenjan', participate: 'Katıl', full: 'Kontenjan Doldu', submitted: 'Başvurunuz iletildi', submitDesc: 'Başvurunuz yönetici onayı bekliyor.', name: 'Katılımcı adı', email: 'E-posta', age: 'Yaş', interest: 'Tarım ilgi alanı', submit: 'Başvuru Gönder', description: 'Açıklama', month: 'Ay', subject: 'Eğitim konusu', activities: 'Pratik faaliyetler', concludes: 'Program sonunda:', all: 'Tüm Kurslar', compare: 'Programları karşılaştır', compareTitle: 'Eğitim programlarını karşılaştırın', duration: 'Süre', participants: 'Kimler için', curriculum: 'Müfredat', enrollNow: 'Hemen kayıt olun', noCurriculum: 'Müfredat bilgisi yakında paylaşılacaktır.', spotsRemaining: 'yer kaldı', registered: 'kayıtlı', loadingSeats: 'Kontenjan yükleniyor' },
+    en: { schedule: 'Course Schedule', instructors: 'Instructors', prerequisites: 'Prerequisites', seats: 'Places Remaining', participate: 'Participate', full: 'Full', submitted: 'Booking request submitted', submitDesc: 'Your request is awaiting administrator approval.', name: 'Participant Name', email: 'Email', age: 'Age', interest: 'Area of Interest / Farming Interest', submit: 'Submit Registration', description: 'Description', month: 'Month', subject: 'Training subject', activities: 'Practical activities', concludes: 'The programme concludes with:', all: 'All Courses', compare: 'Compare programmes', compareTitle: 'Compare training programmes', duration: 'Duration', participants: 'Who it is for', curriculum: 'Curriculum', enrollNow: 'Enroll now', noCurriculum: 'Curriculum details will be shared soon.', spotsRemaining: 'spots remaining', registered: 'registered', loadingSeats: 'Loading availability' },
+    ar: { schedule: 'جدول البرنامج', instructors: 'المدربون', prerequisites: 'المتطلبات السابقة', seats: 'المقاعد المتبقية', participate: 'المشاركة', full: 'مكتمل', submitted: 'تم إرسال طلب الحجز', submitDesc: 'طلبك بانتظار موافقة المسؤول.', name: 'اسم المشارك', email: 'البريد الإلكتروني', age: 'العمر', interest: 'مجال الاهتمام / الاهتمام بالزراعة', submit: 'إرسال التسجيل', description: 'الوصف', month: 'الشهر', subject: 'الموضوع التدريبي', activities: 'الأنشطة العملية', concludes: 'يختتم البرنامج بما يلي:', all: 'جميع الدورات', compare: 'قارن البرامج', compareTitle: 'قارن البرامج التدريبية', duration: 'المدة', participants: 'الفئة المستهدفة', curriculum: 'المنهج الدراسي', enrollNow: 'سجّل الآن', noCurriculum: 'سيتم مشاركة تفاصيل المنهج قريباً.', spotsRemaining: 'مقاعد متبقية', registered: 'مسجلون', loadingSeats: 'جارٍ تحميل المقاعد' },
   }[lang];
 
   const submit = async () => {
@@ -187,7 +187,12 @@ function CourseDetailContent() {
               {availabilityLoading ? (
                 <Loader2 className="mx-auto mt-2 h-6 w-6 animate-spin text-primary" />
               ) : (
-                <p className="mt-1 text-4xl font-bold text-primary">{remaining}</p>
+                <div className="mt-1">
+                  <p className="text-4xl font-bold text-primary">{remaining}</p>
+                  <p className="mt-1 text-xs text-muted-foreground" aria-live="polite">
+                    {remaining} {labels.spotsRemaining} — {availability?.accepted ?? 0}/{availability?.capacity ?? 0} {labels.registered}
+                  </p>
+                </div>
               )}
               <Button className="mt-4 w-full" disabled={isFull || availabilityLoading} onClick={() => setOpen(true)}>
                 <GraduationCap className="mr-2 h-4 w-4" />{isFull ? labels.full : labels.participate}
@@ -239,12 +244,15 @@ function CourseDetailContent() {
                   <tbody>{programme.months.map((row) => <tr key={row.month} className="border-t border-border align-top"><td className="px-4 py-3 font-bold text-primary">{row.month}</td><td className="px-4 py-3 font-medium text-foreground">{row.subject[lang]}</td><td className="px-4 py-3 text-muted-foreground">{row.activities[lang]}</td></tr>)}</tbody>
                 </table>
               </div>
-              <div className="mt-4">
-                <p className="font-semibold text-foreground">{labels.concludes}</p>
-                <ul className="mt-2 grid gap-2 text-sm text-muted-foreground sm:grid-cols-2">
-                  {programme.outcomes?.map((outcome) => <li key={outcome.en} className="rounded-lg border border-border p-3">{outcome[lang]}</li>)}
-                </ul>
-              </div>
+            </section>
+          )}
+
+          {programme.outcomes && programme.outcomes.length > 0 && (
+            <section className="mt-8">
+              <h2 className="text-xl font-bold text-foreground">{labels.concludes}</h2>
+              <ul className="mt-3 grid gap-2 text-sm text-muted-foreground sm:grid-cols-2">
+                {programme.outcomes.map((outcome) => <li key={outcome.en} className="rounded-lg border border-border p-3">{outcome[lang]}</li>)}
+              </ul>
             </section>
           )}
 
@@ -318,17 +326,40 @@ function ProgrammeComparisonCard({
     concludes: string;
     enrollNow: string;
     noCurriculum: string;
+    spotsRemaining: string;
+    registered: string;
+    loadingSeats: string;
+    full: string;
   };
 }) {
+  const { availability, loading, refetch } = useAcademyCourseAvailability(programme.slug);
+  const remaining = availability?.remaining ?? 0;
+  const isFull = !loading && remaining <= 0;
+
+  useEffect(() => {
+    const timer = window.setInterval(() => refetch(), 15000);
+    return () => window.clearInterval(timer);
+  }, [refetch]);
+
   const curriculum = programme.months
     ? programme.months.map((row) => `${labels.month} ${row.month}: ${row.subject[lang]} — ${row.activities[lang]}`)
     : programme.schedule?.map((row) => `${row.time}: ${row.activity[lang]}`) ?? [];
 
   return (
-    <Card className="flex min-w-0 flex-col p-4">
+    <Card className="flex h-full min-w-0 flex-col p-4">
       <h3 className="text-lg font-bold leading-tight text-foreground">{programme.title[lang]}</h3>
       <p className="mt-2 text-sm text-muted-foreground">{programme.description[lang]}</p>
-      <dl className="mt-4 space-y-3 text-sm">
+      {loading ? (
+        <div className="mt-4 flex min-h-10 items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          {labels.loadingSeats}
+        </div>
+      ) : (
+        <p className="mt-4 min-h-10 text-sm font-medium text-primary" aria-live="polite">
+          {remaining} {labels.spotsRemaining} — {availability?.accepted ?? 0}/{availability?.capacity ?? 0} {labels.registered}
+        </p>
+      )}
+      <dl className="mt-4 flex-1 space-y-3 text-sm">
         <div>
           <dt className="font-semibold text-foreground">{labels.duration}</dt>
           <dd className="mt-1 text-muted-foreground">{programme.duration[lang]}</dd>
@@ -366,13 +397,20 @@ function ProgrammeComparisonCard({
           </div>
         )}
       </dl>
-      <Button asChild className="mt-5 w-full">
-        <Link href={`/akademi/${programme.slug}?enroll=1`}>
+      {loading || isFull ? (
+        <Button className="mt-5 w-full" disabled>
           <GraduationCap className="mr-2 h-4 w-4" />
-          {labels.enrollNow}
-          <ArrowRight className="ml-2 h-4 w-4" />
-        </Link>
-      </Button>
+          {isFull ? labels.full : labels.enrollNow}
+        </Button>
+      ) : (
+        <Button asChild className="mt-5 w-full">
+          <Link href={`/akademi/${programme.slug}?enroll=1`}>
+            <GraduationCap className="mr-2 h-4 w-4" />
+            {labels.enrollNow}
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Link>
+        </Button>
+      )}
     </Card>
   );
 }
