@@ -31,6 +31,8 @@ Copy `.env.example` into the hosting environment and provide real values through
 | `GOOGLE_CLIENT_SECRET` | If Google OAuth is enabled | Server/provider-only | Google OAuth provider secret. Keep it in Supabase/provider settings. |
 | `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` | Recommended | Browser-safe | reCAPTCHA v3 site key. |
 | `RECAPTCHA_SECRET_KEY` | Recommended | Server-only | Server verification key used by `app/api/recaptcha-verify/route.ts`. |
+| `RESEND_API_KEY` | Required for notification emails | Supabase Edge Function-only | Resend API key used by `send-notification`. Configure with Supabase Function secrets. |
+| `RESEND_FROM_EMAIL` | Required for notification emails | Supabase Edge Function-only | Sender email on a domain verified in Resend. The test sender `noreply@resend.dev` is not used. |
 | `WEATHER_API_KEY` | Optional | Server/provider-only | Weather provider credential. |
 | `TMEX_API_KEY` | Optional | Server/provider-only | Commodity source credential. |
 | `COMMODITY_API_KEY` | Optional | Server/provider-only | Custom commodity source credential. |
@@ -54,6 +56,8 @@ Copy `.env.example` into the hosting environment and provide real values through
 | `IYZICO_SECRET_KEY` | If payments are enabled | Edge Function-only | Payment provider secret read by `process-payment`. |
 
 Supabase's standard variables are already used by the Edge Functions: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY`. Keep the server-side names available to the Edge Function environment even if the Next.js app uses the `NEXT_PUBLIC_` browser names.
+
+Configure `RESEND_API_KEY` and `RESEND_FROM_EMAIL` as Supabase Edge Function secrets before deploying `send-notification`. Verify the sender's domain in Resend first. Academy registration notifications are addressed to `turandatarim@gmail.com`; this recipient address does not have to match the verified sender.
 
 ## 3. Local verification before upload
 

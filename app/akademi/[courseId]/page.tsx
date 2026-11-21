@@ -41,6 +41,7 @@ function CourseDetailContent() {
   const [open, setOpen] = useState(false);
   const [compareOpen, setCompareOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [bookingSuccess, setBookingSuccess] = useState(false);
   const [recaptchaToken, setRecaptchaToken] = useState('');
   const [recaptchaKey, setRecaptchaKey] = useState(0);
   const [form, setForm] = useState({
@@ -123,9 +124,9 @@ function CourseDetailContent() {
   const remaining = availability?.remaining ?? 0;
   const isFull = !availabilityLoading && remaining <= 0;
   const labels = {
-    tr: { schedule: 'Program Takvimi', instructors: 'Eğitmenler', prerequisites: 'Ön Koşullar', seats: 'Kalan Kontenjan', participate: 'Katıl', full: 'Kontenjan Doldu', submitted: 'Başvurunuz iletildi', submitDesc: 'Başvurunuz yönetici onayı bekliyor.', name: 'Katılımcı adı', email: 'E-posta', age: 'Yaş', interest: 'Tarım ilgi alanı', submit: 'Başvuru Gönder', description: 'Açıklama', month: 'Ay', subject: 'Eğitim konusu', activities: 'Pratik faaliyetler', concludes: 'Program sonunda:', all: 'Tüm Kurslar', compare: 'Programları karşılaştır', compareTitle: 'Eğitim programlarını karşılaştırın', duration: 'Süre', participants: 'Kimler için', curriculum: 'Müfredat', enrollNow: 'Hemen kayıt olun', noCurriculum: 'Müfredat bilgisi yakında paylaşılacaktır.', spotsRemaining: 'yer kaldı', registered: 'kayıtlı', loadingSeats: 'Kontenjan yükleniyor' },
-    en: { schedule: 'Course Schedule', instructors: 'Instructors', prerequisites: 'Prerequisites', seats: 'Places Remaining', participate: 'Participate', full: 'Full', submitted: 'Booking request submitted', submitDesc: 'Your request is awaiting administrator approval.', name: 'Participant Name', email: 'Email', age: 'Age', interest: 'Area of Interest / Farming Interest', submit: 'Submit Registration', description: 'Description', month: 'Month', subject: 'Training subject', activities: 'Practical activities', concludes: 'The programme concludes with:', all: 'All Courses', compare: 'Compare programmes', compareTitle: 'Compare training programmes', duration: 'Duration', participants: 'Who it is for', curriculum: 'Curriculum', enrollNow: 'Enroll now', noCurriculum: 'Curriculum details will be shared soon.', spotsRemaining: 'spots remaining', registered: 'registered', loadingSeats: 'Loading availability' },
-    ar: { schedule: 'جدول البرنامج', instructors: 'المدربون', prerequisites: 'المتطلبات السابقة', seats: 'المقاعد المتبقية', participate: 'المشاركة', full: 'مكتمل', submitted: 'تم إرسال طلب الحجز', submitDesc: 'طلبك بانتظار موافقة المسؤول.', name: 'اسم المشارك', email: 'البريد الإلكتروني', age: 'العمر', interest: 'مجال الاهتمام / الاهتمام بالزراعة', submit: 'إرسال التسجيل', description: 'الوصف', month: 'الشهر', subject: 'الموضوع التدريبي', activities: 'الأنشطة العملية', concludes: 'يختتم البرنامج بما يلي:', all: 'جميع الدورات', compare: 'قارن البرامج', compareTitle: 'قارن البرامج التدريبية', duration: 'المدة', participants: 'الفئة المستهدفة', curriculum: 'المنهج الدراسي', enrollNow: 'سجّل الآن', noCurriculum: 'سيتم مشاركة تفاصيل المنهج قريباً.', spotsRemaining: 'مقاعد متبقية', registered: 'مسجلون', loadingSeats: 'جارٍ تحميل المقاعد' },
+    tr: { schedule: 'Program Takvimi', instructors: 'Eğitmenler', prerequisites: 'Ön Koşullar', seats: 'Kalan Kontenjan', participate: 'Katıl', full: 'Kontenjan Doldu', submitted: 'Başvurunuz iletildi', submitDesc: 'Başvurunuz yönetici onayı bekliyor.', thankYou: 'Başvurunuz için teşekkür ederiz!', returnPrograms: 'Programlara geri dön', name: 'Katılımcı adı', email: 'E-posta', age: 'Yaş', interest: 'Tarım ilgi alanı', submit: 'Başvuru Gönder', description: 'Açıklama', month: 'Ay', subject: 'Eğitim konusu', activities: 'Pratik faaliyetler', concludes: 'Program sonunda:', all: 'Tüm Kurslar', compare: 'Programları karşılaştır', compareTitle: 'Eğitim programlarını karşılaştırın', duration: 'Süre', participants: 'Kimler için', curriculum: 'Müfredat', enrollNow: 'Hemen kayıt olun', noCurriculum: 'Müfredat bilgisi yakında paylaşılacaktır.', spotsRemaining: 'yer kaldı', registered: 'kayıtlı', loadingSeats: 'Kontenjan yükleniyor' },
+    en: { schedule: 'Course Schedule', instructors: 'Instructors', prerequisites: 'Prerequisites', seats: 'Places Remaining', participate: 'Participate', full: 'Full', submitted: 'Booking request submitted', submitDesc: 'Your request is awaiting administrator approval.', thankYou: 'Thank you for your application!', returnPrograms: 'Return to programmes', name: 'Participant Name', email: 'Email', age: 'Age', interest: 'Area of Interest / Farming Interest', submit: 'Submit Registration', description: 'Description', month: 'Month', subject: 'Training subject', activities: 'Practical activities', concludes: 'The programme concludes with:', all: 'All Courses', compare: 'Compare programmes', compareTitle: 'Compare training programmes', duration: 'Duration', participants: 'Who it is for', curriculum: 'Curriculum', enrollNow: 'Enroll now', noCurriculum: 'Curriculum details will be shared soon.', spotsRemaining: 'spots remaining', registered: 'registered', loadingSeats: 'Loading availability' },
+    ar: { schedule: 'جدول البرنامج', instructors: 'المدربون', prerequisites: 'المتطلبات السابقة', seats: 'المقاعد المتبقية', participate: 'المشاركة', full: 'مكتمل', submitted: 'تم إرسال طلب الحجز', submitDesc: 'طلبك بانتظار موافقة المسؤول.', thankYou: 'شكراً لتقديم طلبك!', returnPrograms: 'العودة إلى البرامج', name: 'اسم المشارك', email: 'البريد الإلكتروني', age: 'العمر', interest: 'مجال الاهتمام / الاهتمام بالزراعة', submit: 'إرسال التسجيل', description: 'الوصف', month: 'الشهر', subject: 'الموضوع التدريبي', activities: 'الأنشطة العملية', concludes: 'يختتم البرنامج بما يلي:', all: 'جميع الدورات', compare: 'قارن البرامج', compareTitle: 'قارن البرامج التدريبية', duration: 'المدة', participants: 'الفئة المستهدفة', curriculum: 'المنهج الدراسي', enrollNow: 'سجّل الآن', noCurriculum: 'سيتم مشاركة تفاصيل المنهج قريباً.', spotsRemaining: 'مقاعد متبقية', registered: 'مسجلون', loadingSeats: 'جارٍ تحميل المقاعد' },
   }[lang];
 
   const submit = async () => {
@@ -182,7 +183,7 @@ function CourseDetailContent() {
       } catch (notificationFailure) {
         notificationError = notificationFailure instanceof Error ? notificationFailure.message : String(notificationFailure);
       }
-      toast({ title: labels.submitted, description: labels.submitDesc });
+      setBookingSuccess(true);
       if (notificationError) {
         toast({
           title: lang === 'tr' ? 'Başvurunuz alındı ancak bildirim e-postası gönderilemedi' : lang === 'ar' ? 'تم استلام طلبك ولكن تعذر إرسال إشعار بالبريد الإلكتروني' : 'Your application was received, but the notification email could not be sent',
@@ -190,9 +191,7 @@ function CourseDetailContent() {
           variant: 'destructive',
         });
       }
-      setOpen(false);
       setRecaptchaToken('');
-      setForm({ participantName: profile?.full_name || '', participantEmail: user?.email || '', age: '', farmingInterest: '' });
       await refetch();
     } catch {
       toast({ title: lang === 'tr' ? 'Başvuru gönderilemedi' : lang === 'ar' ? 'تعذر إرسال الطلب' : 'Could not submit booking', variant: 'destructive' });
@@ -336,18 +335,39 @@ function CourseDetailContent() {
 
       <Dialog open={open} onOpenChange={(value) => {
         setOpen(value);
-        if (!value) setRecaptchaToken('');
+        if (!value) {
+          setBookingSuccess(false);
+          setRecaptchaToken('');
+          setForm({ participantName: profile?.full_name || '', participantEmail: user?.email || '', age: '', farmingInterest: '' });
+        }
       }}>
         <DialogContent>
-          <DialogHeader><DialogTitle>{labels.participate} — {programme.title[lang]}</DialogTitle></DialogHeader>
-          <div className="grid gap-4">
-            <div className="space-y-1"><Label>{labels.name}</Label><Input value={form.participantName} onChange={(e) => setForm({ ...form, participantName: e.target.value })} /></div>
-            <div className="space-y-1"><Label>{labels.email}</Label><Input type="email" value={form.participantEmail} onChange={(e) => setForm({ ...form, participantEmail: e.target.value })} /></div>
-            <div className="space-y-1"><Label>{labels.age}</Label><Input type="number" min={1} max={120} value={form.age} onChange={(e) => setForm({ ...form, age: e.target.value })} /></div>
-            <div className="space-y-1"><Label>{labels.interest}</Label><Textarea value={form.farmingInterest} onChange={(e) => setForm({ ...form, farmingInterest: e.target.value })} /></div>
-            <Recaptcha key={recaptchaKey} onVerify={setRecaptchaToken} action="academy_booking" />
-          </div>
-          <DialogFooter><Button onClick={submit} disabled={submitting || !recaptchaToken}>{submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}{labels.submit}</Button></DialogFooter>
+          {bookingSuccess ? (
+            <div className="flex flex-col items-center gap-5 py-8 text-center">
+              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-success/10">
+                <CheckCircle2 className="h-12 w-12 text-success" aria-hidden="true" />
+              </div>
+              <div className="space-y-2">
+                <DialogTitle className="text-xl">{labels.thankYou}</DialogTitle>
+                <p className="text-sm text-muted-foreground">{labels.submitDesc}</p>
+              </div>
+              <Button asChild>
+                <Link href="/akademi" onClick={() => setOpen(false)}>{labels.returnPrograms}</Link>
+              </Button>
+            </div>
+          ) : (
+            <>
+              <DialogHeader><DialogTitle>{labels.participate} — {programme.title[lang]}</DialogTitle></DialogHeader>
+              <div className="grid gap-4">
+                <div className="space-y-1"><Label>{labels.name}</Label><Input value={form.participantName} onChange={(e) => setForm({ ...form, participantName: e.target.value })} /></div>
+                <div className="space-y-1"><Label>{labels.email}</Label><Input type="email" value={form.participantEmail} onChange={(e) => setForm({ ...form, participantEmail: e.target.value })} /></div>
+                <div className="space-y-1"><Label>{labels.age}</Label><Input type="number" min={1} max={120} value={form.age} onChange={(e) => setForm({ ...form, age: e.target.value })} /></div>
+                <div className="space-y-1"><Label>{labels.interest}</Label><Textarea value={form.farmingInterest} onChange={(e) => setForm({ ...form, farmingInterest: e.target.value })} /></div>
+                <Recaptcha key={recaptchaKey} onVerify={setRecaptchaToken} action="academy_booking" />
+              </div>
+              <DialogFooter><Button onClick={submit} disabled={submitting || !recaptchaToken}>{submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}{labels.submit}</Button></DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </div>
