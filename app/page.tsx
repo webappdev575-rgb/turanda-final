@@ -79,11 +79,11 @@ export default function HomePage() {
       {/* ─── Figma hero: headline, preserved search bar + golden-trail button, live stats ─── */}
       <FigmaHero />
 
-      {/* ─── Figma: 2025 innovation statement ─── */}
-      <FigmaInnovationSection />
-
       {/* ─── Figma: Hemen Başlayın gallery ─── */}
       <FigmaGettingStartedSection />
+
+      {/* ─── Figma: 2025 innovation statement ─── */}
+      <FigmaInnovationSection />
 
       {/* ─── Figma: academy feature panel ─── */}
       <FigmaAcademyPanel />
