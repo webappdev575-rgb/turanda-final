@@ -279,7 +279,7 @@ function CourseDetailContent() {
           <DialogHeader>
             <DialogTitle>{labels.compareTitle}</DialogTitle>
           </DialogHeader>
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid grid-cols-1 items-stretch gap-4 md:grid-cols-3">
             {ACADEMY_PROGRAMMES.map((item) => (
               <ProgrammeComparisonCard
                 key={item.slug}
@@ -346,29 +346,33 @@ function ProgrammeComparisonCard({
     : programme.schedule?.map((row) => `${row.time}: ${row.activity[lang]}`) ?? [];
 
   return (
-    <Card className="flex h-full min-w-0 flex-col p-4">
-      <h3 className="text-lg font-bold leading-tight text-foreground">{programme.title[lang]}</h3>
-      <p className="mt-2 text-sm text-muted-foreground">{programme.description[lang]}</p>
+    <Card className="min-w-0 p-4 md:row-span-9 md:grid md:grid-rows-[subgrid]">
+      <h3 className="flex items-start text-lg font-bold leading-tight text-foreground md:pb-3 md:border-b md:border-border/60">
+        {programme.title[lang]}
+      </h3>
+      <p className="mt-2 text-sm leading-5 text-muted-foreground md:mt-0 md:py-3 md:border-b md:border-border/60">
+        {programme.description[lang]}
+      </p>
       {loading ? (
-        <div className="mt-4 flex min-h-10 items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" />
+        <div className="mt-4 flex min-h-10 items-center gap-2 text-sm text-muted-foreground md:mt-0 md:py-3 md:border-b md:border-border/60">
+          <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
           {labels.loadingSeats}
         </div>
       ) : (
-        <p className="mt-4 min-h-10 text-sm font-medium text-primary" aria-live="polite">
+        <p className="mt-4 min-h-10 text-sm font-medium leading-5 text-primary md:mt-0 md:flex md:items-center md:py-3 md:border-b md:border-border/60" aria-live="polite">
           {remaining} {labels.spotsRemaining} — {availability?.accepted ?? 0}/{availability?.capacity ?? 0} {labels.registered}
         </p>
       )}
-      <dl className="mt-4 flex-1 space-y-3 text-sm">
-        <div>
+      <dl className="contents text-sm">
+        <div className="mt-4 border-t border-border/60 pt-3 md:m-0">
           <dt className="font-semibold text-foreground">{labels.duration}</dt>
           <dd className="mt-1 text-muted-foreground">{programme.duration[lang]}</dd>
         </div>
-        <div>
+        <div className="mt-3 border-t border-border/60 pt-3 md:m-0">
           <dt className="font-semibold text-foreground">{labels.participants}</dt>
           <dd className="mt-1 text-muted-foreground">{programme.participants[lang]}</dd>
         </div>
-        <div>
+        <div className="mt-3 border-t border-border/60 pt-3 md:m-0">
           <dt className="font-semibold text-foreground">{labels.prerequisites}</dt>
           <dd>
             <ul className="mt-1 list-disc space-y-1 pl-5 text-muted-foreground">
@@ -376,7 +380,7 @@ function ProgrammeComparisonCard({
             </ul>
           </dd>
         </div>
-        <div>
+        <div className="mt-3 border-t border-border/60 pt-3 md:m-0">
           <dt className="font-semibold text-foreground">{labels.curriculum}</dt>
           {curriculum.length > 0 ? (
             <ul className="mt-1 space-y-2 text-muted-foreground">
@@ -386,24 +390,26 @@ function ProgrammeComparisonCard({
             <dd className="mt-1 text-muted-foreground">{labels.noCurriculum}</dd>
           )}
         </div>
-        {programme.outcomes && programme.outcomes.length > 0 && (
-          <div>
-            <dt className="font-semibold text-foreground">{labels.concludes}</dt>
+        <div className="mt-3 border-t border-border/60 pt-3 md:m-0">
+          <dt className="font-semibold text-foreground">{labels.concludes}</dt>
+          {programme.outcomes && programme.outcomes.length > 0 ? (
             <dd>
               <ul className="mt-1 list-disc space-y-1 pl-5 text-muted-foreground">
                 {programme.outcomes.map((item) => <li key={item.en}>{item[lang]}</li>)}
               </ul>
             </dd>
-          </div>
-        )}
+          ) : (
+            <dd className="mt-1 text-muted-foreground">—</dd>
+          )}
+        </div>
       </dl>
       {loading || isFull ? (
-        <Button className="mt-5 w-full" disabled>
+        <Button className="mt-5 w-full md:mt-3" disabled>
           <GraduationCap className="mr-2 h-4 w-4" />
           {isFull ? labels.full : labels.enrollNow}
         </Button>
       ) : (
-        <Button asChild className="mt-5 w-full">
+        <Button asChild className="mt-5 w-full md:mt-3">
           <Link href={`/akademi/${programme.slug}?enroll=1`}>
             <GraduationCap className="mr-2 h-4 w-4" />
             {labels.enrollNow}
