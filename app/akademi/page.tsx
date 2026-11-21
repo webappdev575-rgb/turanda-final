@@ -242,6 +242,12 @@ function AkademiPageContent() {
                   {programme.note && (
                     <p className="mt-3 text-sm italic text-muted-foreground">{programme.note[locale]}</p>
                   )}
+                  <Link href={`/akademi/${programme.id}`} className="mt-5 inline-flex">
+                    <Button className="bg-primary hover:bg-primary-light">
+                      {locale === 'tr' ? 'Programı İncele ve Katıl' : locale === 'ar' ? 'عرض البرنامج والمشاركة' : 'View Programme & Participate'}
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </Link>
 
                   {programme.schedule && (
                     <details className="mt-5 rounded-xl border border-border">

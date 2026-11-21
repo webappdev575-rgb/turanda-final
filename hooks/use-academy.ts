@@ -2,7 +2,94 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
-import type { AcademyCourse, AcademyLesson, AcademyEnrollment } from '@/lib/types';
+import type {
+  AcademyCourse,
+  AcademyLesson,
+  AcademyEnrollment,
+  AcademyCourseAvailability,
+  AcademyCourseBooking,
+  AcademyCourseSettings,
+  AcademyBookingStatus,
+} from '@/lib/types';
+
+export function useAcademyCourseAvailability(courseSlug: string | null) {
+  const [availability, setAvailability] = useState<AcademyCourseAvailability | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const refetch = useCallback(async () => {
+    if (!courseSlug) { setLoading(false); return; }
+    const { data } = await supabase.rpc('academy_course_availability', { p_course_slug: courseSlug });
+    setAvailability((data as AcademyCourseAvailability) || null);
+    setLoading(false);
+  }, [courseSlug]);
+
+  useEffect(() => { refetch(); }, [refetch]);
+
+  return { availability, loading, refetch };
+}
+
+export async function submitAcademyCourseBooking(input: {
+  courseSlug: string;
+  participantName: string;
+  participantEmail: string;
+  age: number;
+  farmingInterest: string;
+}) {
+  const { data, error } = await supabase.rpc('submit_academy_course_booking', {
+    p_course_slug: input.courseSlug,
+    p_participant_name: input.participantName,
+    p_participant_email: input.participantEmail,
+    p_age: input.age,
+    p_farming_interest: input.farmingInterest,
+  });
+  if (error) throw error;
+  return data as { ok: boolean; reason?: string; booking_id?: string };
+}
+
+export function useAdminAcademyBookings() {
+  const [settings, setSettings] = useState<AcademyCourseSettings[]>([]);
+  const [bookings, setBookings] = useState<AcademyCourseBooking[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchAll = useCallback(async () => {
+    const [settingsRes, bookingsRes] = await Promise.all([
+      supabase.from('academy_course_settings').select('*').order('course_slug', { ascending: true }),
+      supabase.from('academy_course_bookings').select('*').order('created_at', { ascending: false }),
+    ]);
+    setSettings((settingsRes.data as AcademyCourseSettings[]) || []);
+    setBookings((bookingsRes.data as AcademyCourseBooking[]) || []);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { fetchAll(); }, [fetchAll]);
+
+  const updateCapacity = useCallback(async (courseSlug: string, capacity: number) => {
+    const { error } = await supabase
+      .from('academy_course_settings')
+      .update({ capacity, updated_at: new Date().toISOString() })
+      .eq('course_slug', courseSlug);
+    if (error) throw error;
+    await fetchAll();
+  }, [fetchAll]);
+
+  const updateBooking = useCallback(async (
+    id: string,
+    updates: Partial<Pick<AcademyCourseBooking, 'participant_name' | 'participant_email' | 'age' | 'farming_interest' | 'status'>>
+  ) => {
+    const { error } = await supabase
+      .from('academy_course_bookings')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id', id);
+    if (error) throw error;
+    await fetchAll();
+  }, [fetchAll]);
+
+  const setBookingStatus = useCallback(async (id: string, status: AcademyBookingStatus) => {
+    await updateBooking(id, { status });
+  }, [updateBooking]);
+
+  return { settings, bookings, loading, refetch: fetchAll, updateCapacity, updateBooking, setBookingStatus };
+}
 
 export function useAcademyCourses(category?: string, difficulty?: string) {
   const [courses, setCourses] = useState<AcademyCourse[]>([]);

@@ -160,6 +160,35 @@ export interface AcademyEnrollment {
   course?: AcademyCourse;
 }
 
+export type AcademyBookingStatus = 'pending' | 'accepted' | 'refused';
+
+export interface AcademyCourseSettings {
+  course_slug: string;
+  capacity: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AcademyCourseBooking {
+  id: string;
+  course_slug: string;
+  user_id: string | null;
+  participant_name: string;
+  participant_email: string;
+  age: number;
+  farming_interest: string;
+  status: AcademyBookingStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AcademyCourseAvailability {
+  capacity: number;
+  accepted: number;
+  pending: number;
+  remaining: number;
+}
+
 export interface JobCategory {
   id: string;
   name: string;

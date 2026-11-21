@@ -17,6 +17,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 import type { AcademyCourse, AcademyLesson, AcademyDifficulty, LessonType } from '@/lib/types';
+import { AcademyBookingsAdmin } from '@/components/academy/academy-bookings-admin';
 
 const COURSE_CATEGORIES = [
   'Crop Management', 'Livestock', 'Machinery', 'Irrigation',
@@ -39,9 +40,11 @@ export function AcademyAdmin() {
       <TabsList className="mb-4 flex h-auto flex-wrap gap-1">
         <TabsTrigger value="courses" className="gap-1.5"><GraduationCap className="h-4 w-4" />Courses</TabsTrigger>
         <TabsTrigger value="lessons" className="gap-1.5"><BookOpen className="h-4 w-4" />Lessons</TabsTrigger>
+        <TabsTrigger value="bookings" className="gap-1.5"><Check className="h-4 w-4" />Bookings</TabsTrigger>
       </TabsList>
       <TabsContent value="courses"><CoursesTab /></TabsContent>
       <TabsContent value="lessons"><LessonsTab /></TabsContent>
+      <TabsContent value="bookings"><AcademyBookingsAdmin /></TabsContent>
     </Tabs>
   );
 }
