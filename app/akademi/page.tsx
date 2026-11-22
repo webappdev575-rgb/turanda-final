@@ -221,9 +221,9 @@ function AkademiPageContent() {
           {PROGRAMMES.map((programme, index) => (
             <Card key={programme.id} className="overflow-hidden border-border">
               <div className="grid md:grid-cols-[280px_1fr]">
-                <div className="relative min-h-52 overflow-hidden">
-                  <img src={programme.image} alt={programme.title[locale]} className="absolute inset-0 h-full w-full object-cover" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent" />
+                <div className="relative aspect-[2/1] w-full self-start overflow-hidden bg-muted">
+                  <img src={programme.image} alt={programme.title[locale]} className="absolute inset-0 h-full w-full object-contain" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-transparent" />
                   <Badge className="absolute bottom-4 left-4 bg-cream/95 text-brand border-0">
                     {index + 1}. {programme.duration[locale]}
                   </Badge>
